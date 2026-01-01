@@ -245,14 +245,18 @@
         let currentTransactionId = null;
 
         // Construct base URL from current location
-        const baseUrl = window.location.origin + '/Ind6TokenVendor/';
+        // Auto-detect if we're on local or production
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseUrl = isLocal
+            ? window.location.origin + '/Ind6TokenVendor/'
+            : window.location.origin + '/';
 
         console.log('Current URL:', window.location.href); // Debug
         console.log('Origin:', window.location.origin); // Debug
         console.log('Base URL:', baseUrl); // Debug
 
         // Handle form submission
-        $('#paymentForm').on('submit', function(e) {
+        $('#paymentForm').on('submit', function (e) {
             e.preventDefault();
 
             const gateway = $('#gateway').val();
@@ -279,53 +283,53 @@
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     console.log('Response:', response); // Debug
-                    
+
                     if (response.success) {
                         currentTransactionId = response.transaction_id || response.payment_id;
-                        
+
                         // Check if we have a payment URL
                         if (response.payment_url) {
                             const gatewayName = gateway === 'localpaisa' ? 'LocalPaisa' : 'PayRaizen';
                             showAlert('success', `${gatewayName} payment initiated! Opening payment app...`);
-                            
+
                             // Show Pay Now button
                             $('#testButtons').html(`
                                 <button class="btn" onclick="window.location.href='${response.payment_url}'" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">
                                     <i class="fas fa-mobile-alt"></i> Pay Now (₹${$('#amount').val()})
                                 </button>
                             `).slideDown();
-                            
+
                             // Open payment URL automatically on mobile
                             if (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                                setTimeout(function() {
+                                setTimeout(function () {
                                     window.location.href = response.payment_url;
                                 }, 1000);
                             }
-                            
+
                             // For LocalPaisa, don't redirect to checkout immediately
                             if (gateway !== 'localpaisa') {
                                 // Redirect to checkout after 3 seconds for PayRaizen
                                 const checkoutUrl = baseUrl + 'payment/checkout?txn_id=' + currentTransactionId;
                                 console.log('Will redirect to:', checkoutUrl); // Debug
-                                
-                                setTimeout(function() {
+
+                                setTimeout(function () {
                                     window.location.href = checkoutUrl;
                                 }, 3000);
                             }
                         } else {
                             // Fallback for payments without payment URL
                             showAlert('success', 'Payment created! Redirecting to checkout...');
-                            
+
                             // Show test buttons
                             $('#testButtons').slideDown();
 
                             // Redirect to checkout after 2 seconds
                             const checkoutUrl = baseUrl + 'payment/checkout?txn_id=' + currentTransactionId;
                             console.log('Redirecting to:', checkoutUrl); // Debug
-                            
-                            setTimeout(function() {
+
+                            setTimeout(function () {
                                 window.location.href = checkoutUrl;
                             }, 2000);
                         }
@@ -334,7 +338,7 @@
                         $('#submitBtn').prop('disabled', false).html('<i class="fas fa-rocket"></i> Create Test Payment');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.error('Error:', error);
                     console.error('Response:', xhr.responseText);
                     showAlert('error', 'An error occurred. Please try again.');
