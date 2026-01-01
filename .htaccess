@@ -1,22 +1,48 @@
 # Disable directory browsing
 Options -Indexes
 
+# Prevent access to sensitive files and directories
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to app, writable, tests, and vendor directories
+RedirectMatch 403 ^/(app|writable|tests|vendor)/.*$
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
     
-    # Redirect to public folder if not already there
-    RewriteCond %{REQUEST_URI} !^/public/
+    # Redirect to HTTPS (optional, uncomment if you want to force HTTPS)
+    # RewriteCond %{HTTPS} !=on
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+    
+    # Remove index.php from URL
+    RewriteCond %{THE_REQUEST} ^GET.*index\.php [NC]
+    RewriteRule (.*?)index\.php/*(.*) /$1$2 [R=301,NE,L]
+    
+    # Redirect Trailing Slashes...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+    
+    # Handle Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/$1 [L]
+    RewriteRule ^(.*)$ index.php/$1 [L]
     
-    # If the file exists in public, serve it
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/index.php/$1 [L]
+    # Ensure Authorization header is passed along
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>
 
-# If mod_rewrite is not available, redirect via index.php
 <IfModule !mod_rewrite.c>
-    ErrorDocument 404 /public/index.php
+    # If we don't have mod_rewrite installed, all 404's
+    # can be sent to index.php, and everything works as normal.
+    ErrorDocument 404 index.php
 </IfModule>
+
+# Disable server signature
+ServerSignature Off
+
