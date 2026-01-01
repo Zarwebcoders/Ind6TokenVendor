@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Route Test</title>
+</head>
+
+<body>
+    <h1>Testing API Routes</h1>
+    <button onclick="testVerify()">Test Verify Route</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testVerify() {
+            const result = document.getElementById('result');
+            result.textContent = 'Testing...';
+
+            try {
+                const response = await fetch('/Ind6TokenVendor/api/payment/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction_id: 'TEST_123',
+                        status: 'SUCCESS',
+                        approval_ref_no: '123456789',
+                        response_code: '00'
+                    })
+                });
+
+                const data = await response.json();
+                result.textContent = `Status: ${response.status}\n\n` + JSON.stringify(data, null, 2);
+            } catch (e) {
+                result.textContent = 'Error: ' + e.message;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BharatPe Payment Gateway Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .bharatpe-logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .payment-section {
+            display: none;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .payment-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-code img {
+            max-width: 250px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+        }
+
+        .payment-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .payment-info p {
+            margin: 10px 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .payment-info strong {
+            color: #333;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .upi-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #60a917;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            margin: 10px 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .upi-button:hover {
+            background: #4d8a13;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔷 BharatPe Payment Test</h1>
+            <p style="color: #666; margin-top: 10px;">Test automatic payment status tracking</p>
+        </div>
+
+        <!-- Payment Form -->
+        <div id="paymentForm">
+            <div class="form-group">
+                <label for="vendorId">Vendor ID</label>
+                <input type="text" id="vendorId" placeholder="Enter vendor ID" value="1">
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount (₹)</label>
+                <input type="number" id="amount" placeholder="Enter amount" value="100" min="1" step="0.01">
+            </div>
+
+            <button class="btn" onclick="createPayment()">Create BharatPe Payment</button>
+        </div>
+
+        <!-- Payment Section -->
+        <div id="paymentSection" class="payment-section">
+            <h3 style="color: #333; margin-bottom: 20px;">Payment Details</h3>
+
+            <div class="payment-info">
+                <p><strong>Order ID:</strong> <span id="orderId">-</span></p>
+                <p><strong>Amount:</strong> ₹<span id="paymentAmount">-</span></p>
+                <p><strong>Status:</strong> <span id="paymentStatus" class="status-badge status-pending">Pending</span>
+                </p>
+            </div>
+
+            <div class="qr-code" id="qrCodeSection" style="display: none;">
+                <h4 style="color: #555; margin-bottom: 15px;">Scan QR Code to Pay</h4>
+                <img id="qrCodeImage" src="" alt="QR Code">
+            </div>
+
+            <div id="upiIntentSection" style="text-align: center; display: none;">
+                <h4 style="color: #555; margin-bottom: 15px;">Pay with UPI App</h4>
+                <a id="upiIntentLink" href="#" class="upi-button">Open UPI App</a>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>ℹ️ Auto-tracking enabled:</strong> Payment status will be automatically updated when you
+                complete the payment.
+            </div>
+
+            <div id="statusMessage"></div>
+
+            <button class="btn" onclick="checkPaymentStatus()" id="checkStatusBtn">Check Payment Status</button>
+            <button class="btn" onclick="resetForm()" style="background: #6c757d; margin-top: 10px;">Create New
+                Payment</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost/Ind6TokenVendor';
+        let currentOrderId = null;
+        let statusCheckInterval = null;
+
+        async function createPayment() {
+            const vendorId = document.getElementById('vendorId').value;
+            const amount = document.getElementById('amount').value;
+
+            if (!vendorId || !amount || amount <= 0) {
+                alert('Please enter valid vendor ID and amount');
+                return;
+            }
+
+            try {
+                // Show loading
+                document.getElementById('paymentForm').innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top: 15px; color: #666;">Creating payment request...</p></div>';
+
+                const response = await fetch(`${API_BASE_URL}/api/bharatpe/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        vendor_id: vendorId,
+                        amount: amount
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentOrderId = data.order_id;
+
+                    // Update UI
+                    document.getElementById('orderId').textContent = data.order_id;
+                    document.getElementById('paymentAmount').textContent = data.amount;
+
+                    // Show QR code if available
+                    if (data.qr_code) {
+                        document.getElementById('qrCodeImage').src = data.qr_code;
+                        document.getElementById('qrCodeSection').style.display = 'block';
+                    }
+
+                    // Show UPI intent if available
+                    if (data.upi_intent) {
+                        document.getElementById('upiIntentLink').href = data.upi_intent;
+                        document.getElementById('upiIntentSection').style.display = 'block';
+                    }
+
+                    // Show payment section
+                    document.getElementById('paymentSection').classList.add('active');
+
+                    // Start auto-checking status every 5 seconds
+                    startAutoStatusCheck();
+                } else {
+                    alert('Failed to create payment: ' + (data.message || 'Unknown error'));
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error creating payment: ' + error.message);
+                location.reload();
+            }
+        }
+
+        async function checkPaymentStatus() {
+            if (!currentOrderId) {
+                alert('No active payment');
+                return;
+            }
+
+            const btn = document.getElementById('checkStatusBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/bharatpe/check-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        order_id: currentOrderId
+                    })
+                });
+
+                const data = await response.json();
+
+                updatePaymentStatus(data);
+            } catch (error) {
+                console.error('Error:', error);
+                showStatusMessage('Error checking status: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        function updatePaymentStatus(data) {
+            const statusBadge = document.getElementById('paymentStatus');
+
+            if (data.status === 'success') {
+                statusBadge.textContent = 'Success ✓';
+                statusBadge.className = 'status-badge status-success';
+                showStatusMessage(`Payment successful! UTR: ${data.utr || 'N/A'}`, 'success');
+                stopAutoStatusCheck();
+                document.getElementById('checkStatusBtn').style.display = 'none';
+            } else if (data.status === 'error' || data.status === 'failed') {
+                statusBadge.textContent = 'Failed ✗';
+                statusBadge.className = 'status-badge status-failed';
+                showStatusMessage('Payment failed. Please try again.', 'danger');
+                stopAutoStatusCheck();
+            } else {
+                statusBadge.textContent = 'Pending...';
+                statusBadge.className = 'status-badge status-pending';
+                showStatusMessage('Waiting for payment...', 'info');
+            }
+        }
+
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        function startAutoStatusCheck() {
+            // Check immediately
+            setTimeout(checkPaymentStatus, 2000);
+
+            // Then check every 5 seconds
+            statusCheckInterval = setInterval(checkPaymentStatus, 5000);
+        }
+
+        function stopAutoStatusCheck() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+        }
+
+        function resetForm() {
+            stopAutoStatusCheck();
+            location.reload();
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopAutoStatusCheck);
+    </script>
+</body>
+
+</html>

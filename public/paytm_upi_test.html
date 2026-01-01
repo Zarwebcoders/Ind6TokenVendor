@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paytm UPI Payment Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-2xl w-full">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">💳 Paytm UPI Payment</h1>
+            <p class="text-sm text-gray-600">Automatic Payment Verification via Paytm API</p>
+        </div>
+
+        <!-- Success Message -->
+        <div id="success-msg"
+            class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded mb-4">
+            <div class="flex items-center">
+                <span class="text-2xl mr-3">✅</span>
+                <div>
+                    <strong class="font-bold">Payment Successful!</strong>
+                    <p class="text-sm" id="success-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error-msg" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-4">
+            <div class="flex items-center">
+                <span class="text-2xl mr-3">❌</span>
+                <div>
+                    <strong class="font-bold">Error!</strong>
+                    <p class="text-sm" id="error-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div id="payment-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Amount (INR)</label>
+                <input type="number" id="amount" value="10.00" min="1" step="0.01"
+                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button id="upiBtn" onclick="initiateUpiPayment()"
+                    class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-blue-800 transition font-semibold shadow-lg">
+                    📱 Pay with UPI
+                </button>
+
+                <button id="gatewayBtn" onclick="initiateGatewayPayment()"
+                    class="bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 px-6 rounded-lg hover:from-purple-700 hover:to-purple-800 transition font-semibold shadow-lg">
+                    💳 Pay with Gateway
+                </button>
+            </div>
+        </div>
+
+        <!-- Payment Details -->
+        <div id="payment-details" class="hidden mt-6">
+            <div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Payment Details</h3>
+
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Order ID:</span>
+                        <span class="font-mono font-semibold" id="order-id">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Amount:</span>
+                        <span class="font-semibold text-green-600" id="payment-amount">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Status:</span>
+                        <span class="font-semibold" id="payment-status">-</span>
+                    </div>
+                </div>
+
+                <!-- QR Code Section -->
+                <div id="qr-section" class="hidden mt-6">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-600 mb-3">Scan QR Code to Pay</p>
+                        <div class="flex justify-center">
+                            <canvas id="qr-code" class="border-4 border-gray-300 rounded-lg"></canvas>
+                        </div>
+                        <div class="mt-4 space-y-2">
+                            <button id="upi-link-btn" onclick="openUpiLink()"
+                                class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+                                📱 Open UPI App
+                            </button>
+                            <button id="paytm-link-btn" onclick="openPaytmLink()"
+                                class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition">
+                                💳 Open Paytm App
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Indicator -->
+                <div id="status-indicator" class="mt-4 text-center">
+                    <div class="inline-flex items-center space-x-2">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <span class="text-sm text-gray-600" id="status-text">Checking payment status...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Form (Hidden for Gateway) -->
+        <form id="paytmForm" method="post" action="" style="display:none;">
+            <input type="hidden" name="MID" id="MID">
+            <input type="hidden" name="WEBSITE" id="WEBSITE">
+            <input type="hidden" name="INDUSTRY_TYPE_ID" id="INDUSTRY_TYPE_ID">
+            <input type="hidden" name="CHANNEL_ID" id="CHANNEL_ID">
+            <input type="hidden" name="ORDER_ID" id="ORDER_ID">
+            <input type="hidden" name="CUST_ID" id="CUST_ID">
+            <input type="hidden" name="TXN_AMOUNT" id="TXN_AMOUNT">
+            <input type="hidden" name="CALLBACK_URL" id="CALLBACK_URL">
+            <input type="hidden" name="CHECKSUMHASH" id="CHECKSUMHASH">
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin.includes('ngrok')
+            ? window.location.origin + '/Ind6TokenVendor'
+            : window.location.origin + '/Ind6TokenVendor';
+        const VENDOR_ID = 1;
+        let currentOrderId = null;
+        let checkInterval = null;
+        let upiIntentLink = null;
+        let paytmIntentLink = null;
+
+        // Initiate UPI Payment
+        async function initiateUpiPayment() {
+            const amount = document.getElementById('amount').value;
+
+            if (!amount || amount <= 0) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            hideMessages();
+            disableButtons(true);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/paytm/upi/initiate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vendor_id: VENDOR_ID,
+                        amount: amount
+                    })
+                });
+
+                const data = await response.json();
+                console.log('UPI Payment Response:', data);
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to initiate payment');
+                }
+
+                currentOrderId = data.order_id;
+                upiIntentLink = data.upi_intent;
+                paytmIntentLink = data.paytm_intent;
+
+                // Show payment details
+                document.getElementById('order-id').textContent = data.order_id;
+                document.getElementById('payment-amount').textContent = `₹${amount}`;
+                document.getElementById('payment-status').innerHTML = '<span class="text-yellow-600">⏳ Pending</span>';
+
+                document.getElementById('payment-form').classList.add('hidden');
+                document.getElementById('payment-details').classList.remove('hidden');
+                document.getElementById('qr-section').classList.remove('hidden');
+
+                // Generate QR Code
+                QRCode.toCanvas(document.getElementById('qr-code'), data.qr_string, {
+                    width: 250,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, function (error) {
+                    if (error) console.error('QR Code Error:', error);
+                });
+
+                // Start checking status
+                startStatusChecking();
+
+            } catch (error) {
+                console.error(error);
+                showError(error.message);
+                disableButtons(false);
+            }
+        }
+
+        // Initiate Gateway Payment
+        async function initiateGatewayPayment() {
+            const amount = document.getElementById('amount').value;
+
+            if (!amount || amount <= 0) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            hideMessages();
+            disableButtons(true);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/paytm/initiate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vendor_id: VENDOR_ID,
+                        amount: amount
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Gateway Payment Response:', data);
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to initiate payment');
+                }
+
+                currentOrderId = data.order_id;
+
+                // Fill form with Paytm parameters
+                const form = document.getElementById('paytmForm');
+                form.action = data.payment_url;
+
+                Object.keys(data.params).forEach(key => {
+                    let input = document.getElementById(key);
+                    if (!input) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.id = key;
+                        form.appendChild(input);
+                    }
+                    input.value = data.params[key];
+                });
+
+                // Show payment details
+                document.getElementById('order-id').textContent = data.order_id;
+                document.getElementById('payment-amount').textContent = `₹${amount}`;
+                document.getElementById('payment-status').innerHTML = '<span class="text-blue-600">🔄 Redirecting...</span>';
+
+                document.getElementById('payment-form').classList.add('hidden');
+                document.getElementById('payment-details').classList.remove('hidden');
+
+                // Submit form to Paytm
+                setTimeout(() => {
+                    form.submit();
+                    startStatusChecking();
+                }, 1500);
+
+            } catch (error) {
+                console.error(error);
+                showError(error.message);
+                disableButtons(false);
+            }
+        }
+
+        // Open UPI Link
+        function openUpiLink() {
+            if (upiIntentLink) {
+                window.location.href = upiIntentLink;
+            }
+        }
+
+        // Open Paytm Link
+        function openPaytmLink() {
+            if (paytmIntentLink) {
+                window.location.href = paytmIntentLink;
+            }
+        }
+
+        // Start Status Checking
+        function startStatusChecking() {
+            if (checkInterval) clearInterval(checkInterval);
+
+            checkInterval = setInterval(async () => {
+                if (currentOrderId) {
+                    await checkPaymentStatus();
+                }
+            }, 3000); // Check every 3 seconds
+        }
+
+        // Check Payment Status
+        async function checkPaymentStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/paytm/check-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: currentOrderId })
+                });
+
+                const data = await response.json();
+                console.log('Status Check:', data);
+
+                if (data.status === 'success') {
+                    clearInterval(checkInterval);
+                    document.getElementById('payment-status').innerHTML = '<span class="text-green-600">✅ Success</span>';
+                    document.getElementById('status-indicator').classList.add('hidden');
+                    showSuccess(`Payment completed successfully! Transaction ID: ${data.txn_id}`);
+                    disableButtons(false);
+                } else if (data.status === 'error') {
+                    clearInterval(checkInterval);
+                    document.getElementById('payment-status').innerHTML = '<span class="text-red-600">❌ Failed</span>';
+                    document.getElementById('status-indicator').classList.add('hidden');
+                    showError(data.error || 'Payment failed');
+                    disableButtons(false);
+                } else {
+                    document.getElementById('status-text').textContent = 'Waiting for payment...';
+                }
+            } catch (error) {
+                console.error('Status check failed:', error);
+            }
+        }
+
+        // UI Helper Functions
+        function showSuccess(message) {
+            hideMessages();
+            document.getElementById('success-text').textContent = message;
+            document.getElementById('success-msg').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            hideMessages();
+            document.getElementById('error-text').textContent = message;
+            document.getElementById('error-msg').classList.remove('hidden');
+        }
+
+        function hideMessages() {
+            document.getElementById('success-msg').classList.add('hidden');
+            document.getElementById('error-msg').classList.add('hidden');
+        }
+
+        function disableButtons(disabled) {
+            document.getElementById('upiBtn').disabled = disabled;
+            document.getElementById('gatewayBtn').disabled = disabled;
+            if (disabled) {
+                document.getElementById('upiBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('gatewayBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                document.getElementById('upiBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('gatewayBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    </script>
+</body>
+
+</html>

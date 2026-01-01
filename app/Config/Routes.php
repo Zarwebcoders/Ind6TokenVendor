@@ -1,0 +1,85 @@
+<?php
+
+use CodeIgniter\Router\RouteCollection;
+
+/**
+ * @var RouteCollection $routes
+ */
+
+// Set default namespace and controller
+$routes->setDefaultNamespace('App\Controllers');
+$routes->setDefaultController('Home');
+$routes->setDefaultMethod('index');
+$routes->setTranslateURIDashes(false);
+$routes->set404Override();
+$routes->setAutoRoute(false);
+
+// Routes start here
+
+$routes->get('auth/login', 'Auth::login');
+$routes->post('auth/login', 'Auth::loginProcess');
+$routes->get('auth/logout', 'Auth::logout');
+
+$routes->get('/', 'Home::index', ['filter' => 'auth']);
+$routes->get('user-profile', 'Home::userProfile');
+$routes->post('user-profile/update', 'Auth::updateProfile', ['filter' => 'auth']);
+$routes->get('auth/register', 'Home::authRegister'); // Keep this for now, though admin registration might not be public
+$routes->get('utilities/form', 'Home::utilitiesForm', ['filter' => 'auth']);
+$routes->get('utilities/vendors', 'Home::utilitiesTable', ['filter' => 'auth']);
+$routes->get('utilities/transactions', 'Home::utilitiesTransactions', ['filter' => 'auth']);
+$routes->get('utilities/typography', 'Home::utilitiesTypography', ['filter' => 'auth']);
+$routes->get('docs/payment-api', 'Home::docsPaymentApi', ['filter' => 'auth']);
+$routes->post('bank/save', 'Bank::save', ['filter' => 'auth']);
+
+// Vendor Routes
+
+$routes->get('register', 'VendorAuth::register');
+$routes->post('register', 'VendorAuth::registerProcess');
+$routes->get('login', 'VendorAuth::login'); // Placeholder
+
+// API Routes for Payment Gateway
+$routes->post('api/payment/initiate', 'PaymentApi::initiate');
+$routes->post('api/payment/verify', 'PaymentApi::verifyPayment'); // UPI response verification
+$routes->post('api/payment/query', 'PaymentApi::queryStatus'); // Query payment status
+$routes->post('api/payment/update', 'PaymentApi::updateStatus'); // Manual update (legacy)
+
+// Payraizen Gateway Routes
+$routes->post('api/payment/payraizen/initiate', 'PaymentApi::createPayraizenRequest');
+$routes->post('api/payment/payraizen/webhook', 'PaymentApi::handlePayraizenWebhook');
+
+// LocalPaisa Gateway Routes
+$routes->post('api/payment/localpaisa/initiate', 'PaymentTest::createLocalPaisaRequest');
+$routes->post('payment/localpaisa/webhook', 'PaymentTest::handleLocalPaisaWebhook');
+
+// Paytm Gateway Routes (Automatic Verification)
+$routes->post('api/paytm/initiate', 'PaytmGatewayApi::initiatePayment');
+$routes->post('api/paytm/upi/initiate', 'PaytmGatewayApi::initiateUpiPayment'); // UPI Direct Payment
+$routes->post('api/paytm/check-status', 'PaytmGatewayApi::checkStatus');
+$routes->post('api/paytm/callback', 'PaytmGatewayApi::callback');
+$routes->get('api/paytm/callback', 'PaytmGatewayApi::callback');
+
+
+// BharatPe Gateway Routes (Automatic Verification)
+$routes->post('api/bharatpe/create', 'BharatPeApi::createPayment');
+$routes->post('api/bharatpe/check-status', 'BharatPeApi::checkStatus');
+$routes->post('api/bharatpe/callback', 'BharatPeApi::callback');
+$routes->get('api/bharatpe/callback', 'BharatPeApi::callback');
+
+// Payment Checkout Routes
+$routes->get('payment/checkout', 'PaymentCheckout::index');
+$routes->post('payment/check-status', 'PaymentCheckout::checkStatus');
+$routes->get('payment/success', 'PaymentCheckout::success');
+$routes->get('payment/failure', 'PaymentCheckout::failure');
+$routes->get('payment/pending', 'PaymentCheckout::pending');
+
+// Webhook Routes
+$routes->post('webhook/payment', 'PaymentWebhook::handleWebhook');
+
+// Testing Routes (REMOVE IN PRODUCTION!)
+$routes->post('payment/simulate/success', 'PaymentWebhook::simulateSuccess');
+$routes->post('payment/simulate/failure', 'PaymentWebhook::simulateFailure');
+$routes->get('payment/test', 'PaymentTest::index');
+$routes->post('api/payment/test/create', 'PaymentTest::createTestPayment');
+
+
+

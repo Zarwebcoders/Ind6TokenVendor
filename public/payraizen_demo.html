@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payraizen Payment Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .response.success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .response.error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .response h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .response pre {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .payment-link {
+            margin-top: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .payment-link a {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .payment-link a:hover {
+            background: #218838;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚀 Payraizen Payment Demo</h1>
+        <p class="subtitle">Test the automated payment gateway integration</p>
+
+        <div class="info-box">
+            <p><strong>Gateway:</strong> Payraizen</p>
+            <p><strong>Features:</strong> Auto UTR capture, Webhook support</p>
+            <p><strong>Status:</strong> <span style="color: #28a745;">✓ Active</span></p>
+        </div>
+
+        <form id="paymentForm">
+            <div class="form-group">
+                <label for="vendor_id">Vendor ID</label>
+                <input type="number" id="vendor_id" name="vendor_id" value="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount (₹)</label>
+                <input type="number" id="amount" name="amount" min="1" step="0.01" value="100" required>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                Initiate Payment
+            </button>
+        </form>
+
+        <div class="loader" id="loader"></div>
+
+        <div class="response" id="response"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('paymentForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const loader = document.getElementById('loader');
+        const responseDiv = document.getElementById('response');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Get form data
+            const vendorId = document.getElementById('vendor_id').value;
+            const amount = document.getElementById('amount').value;
+
+            // Disable button and show loader
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            loader.style.display = 'block';
+            responseDiv.style.display = 'none';
+
+            try {
+                // Get base URL dynamically - extract path from current location
+                const currentPath = window.location.pathname;
+                const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                const apiUrl = `${window.location.origin}${basePath}/api/payment/payraizen/initiate`;
+
+                console.log('Calling API:', apiUrl);
+                console.log('Payload:', { vendor_id: vendorId, amount: parseFloat(amount) });
+
+                // Make API call
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        vendor_id: vendorId,
+                        amount: parseFloat(amount)
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                // Get response text first
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+
+                // Hide loader
+                loader.style.display = 'none';
+
+                // Try to parse as JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    // Not JSON, probably HTML error page
+                    responseDiv.className = 'response error';
+                    responseDiv.innerHTML = `
+                        <h3>✗ Server Error</h3>
+                        <p>The server returned an HTML response instead of JSON. This usually means:</p>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>The route is not configured correctly</li>
+                            <li>There's a PHP error in the controller</li>
+                            <li>The API endpoint doesn't exist</li>
+                        </ul>
+                        <p><strong>API URL:</strong> ${apiUrl}</p>
+                        <p><strong>HTTP Status:</strong> ${response.status}</p>
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; font-weight: bold;">Show Server Response</summary>
+                            <pre style="max-height: 300px; overflow: auto;">${responseText.substring(0, 1000)}</pre>
+                        </details>
+                    `;
+                    responseDiv.style.display = 'block';
+                    return;
+                }
+
+                if (response.ok && data.success) {
+                    // Success
+                    responseDiv.className = 'response success';
+                    responseDiv.innerHTML = `
+                        <h3>✓ Payment Initiated Successfully</h3>
+                        <p><strong>Transaction ID:</strong> ${data.transaction_id}</p>
+                        <p><strong>Gateway Order ID:</strong> ${data.gateway_order_id}</p>
+                        <p><strong>Amount:</strong> ₹${data.payment_info.amount}</p>
+                        ${data.payment_url ? `
+                            <div class="payment-link">
+                                <p style="margin-bottom: 10px; color: #333;">Click below to complete payment:</p>
+                                <a href="${data.payment_url}" target="_blank">Open Payment App</a>
+                            </div>
+                        ` : ''}
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    // Error
+                    responseDiv.className = 'response error';
+                    responseDiv.innerHTML = `
+                        <h3>✗ Payment Failed</h3>
+                        <p>${data.message || data.messages || 'An error occurred'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+
+                responseDiv.style.display = 'block';
+
+            } catch (error) {
+                // Network error
+                loader.style.display = 'none';
+                responseDiv.className = 'response error';
+                responseDiv.innerHTML = `
+                    <h3>✗ Network Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Please check:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>XAMPP is running</li>
+                        <li>Apache server is started</li>
+                        <li>The API route exists in Routes.php</li>
+                    </ul>
+                `;
+                responseDiv.style.display = 'block';
+                console.error('Fetch error:', error);
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Initiate Payment';
+            }
+        });
+    </script>
+</body>
+
+</html>

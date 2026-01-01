@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payraizen API Test - Simple</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Payraizen API Test (Simple)</h1>
+
+        <div class="info">
+            <p><strong>API Endpoint:</strong> <code id="apiEndpoint"></code></p>
+            <p><strong>Method:</strong> POST</p>
+            <p><strong>Content-Type:</strong> application/json</p>
+        </div>
+
+        <form id="testForm">
+            <div class="form-group">
+                <label for="vendor_id">Vendor ID:</label>
+                <input type="number" id="vendor_id" value="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount (₹):</label>
+                <input type="number" id="amount" value="100" min="1" step="0.01" required>
+            </div>
+
+            <button type="submit" id="submitBtn">Test API</button>
+        </form>
+
+        <div class="response" id="response"></div>
+    </div>
+
+    <script>
+        // Set API endpoint
+        const apiUrl = window.location.origin + '/Ind6TokenVendor/api/payment/payraizen/initiate';
+        document.getElementById('apiEndpoint').textContent = apiUrl;
+
+        const form = document.getElementById('testForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const responseDiv = document.getElementById('response');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const vendorId = document.getElementById('vendor_id').value;
+            const amount = document.getElementById('amount').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Testing...';
+            responseDiv.style.display = 'none';
+
+            const payload = {
+                vendor_id: vendorId,
+                amount: parseFloat(amount)
+            };
+
+            console.log('=== API TEST ===');
+            console.log('URL:', apiUrl);
+            console.log('Payload:', payload);
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                console.log('Status:', response.status);
+                console.log('Status Text:', response.statusText);
+
+                const responseText = await response.text();
+                console.log('Response Text:', responseText);
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                    console.log('Parsed JSON:', data);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    responseDiv.className = 'response error';
+                    responseDiv.innerHTML = `
+                        <h3>❌ Server Error</h3>
+                        <p><strong>HTTP Status:</strong> ${response.status}</p>
+                        <p>The server returned HTML instead of JSON. Check console for details.</p>
+                        <details>
+                            <summary>Show Response</summary>
+                            <pre>${responseText.substring(0, 500)}</pre>
+                        </details>
+                    `;
+                    responseDiv.style.display = 'block';
+                    return;
+                }
+
+                if (response.ok && data.success) {
+                    responseDiv.className = 'response success';
+                    responseDiv.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p><strong>Transaction ID:</strong> ${data.transaction_id}</p>
+                        <p><strong>Gateway Order ID:</strong> ${data.gateway_order_id || 'N/A'}</p>
+                        <p><strong>Amount:</strong> ₹${data.payment_info?.amount || amount}</p>
+                        ${data.payment_url ? `<p><strong>Payment URL:</strong> <a href="${data.payment_url}" target="_blank">Open</a></p>` : ''}
+                        <details>
+                            <summary>Full Response</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.innerHTML = `
+                        <h3>❌ Error</h3>
+                        <p>${data.message || data.messages || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+
+                responseDiv.style.display = 'block';
+
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                responseDiv.className = 'response error';
+                responseDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Check browser console for details.</p>
+                `;
+                responseDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Test API';
+            }
+        });
+    </script>
+</body>
+
+</html>

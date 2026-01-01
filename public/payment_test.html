@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Payment Test - Direct Integration</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">🚀 Direct UPI Payment</h1>
+        <p class="text-sm text-center text-gray-600 mb-4">No Payment Gateway • No Fees • Works Like Android App</p>
+
+        <div id="success-msg"
+            class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4"
+            role="alert">
+            <strong class="font-bold">Success!</strong>
+            <span class="block sm:inline" id="success-text">Payment completed.</span>
+        </div>
+
+        <div id="error-msg" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+            role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="error-text">Something went wrong.</span>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Amount (INR)</label>
+            <input type="number" id="amount" value="1.00"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Enter amount">
+        </div>
+
+        <button id="payBtn" onclick="initiatePayment()"
+            class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
+            💳 Pay Now
+        </button>
+
+        <div id="status" class="mt-4 text-center text-sm font-mono text-gray-600"></div>
+
+        <div id="payment-area" class="hidden mt-6 border-t pt-4">
+            <p class="text-center font-semibold mb-2">Scan to Pay (Desktop)</p>
+            <div id="qrcode" class="flex justify-center mb-4"></div>
+
+            <p class="text-center font-semibold mb-2">OR</p>
+
+            <a id="deepLink" href="#"
+                class="block w-full text-center bg-green-600 text-white py-3 px-4 rounded font-bold hover:bg-green-700 mb-3">
+                📱 Open in UPI App (All Apps)
+            </a>
+
+            <a id="paytmLink" href="#"
+                class="block w-full text-center bg-blue-600 text-white py-3 px-4 rounded font-bold hover:bg-blue-700">
+                💳 Pay with Paytm (Recommended)
+            </a>
+            <p class="text-xs text-gray-500 text-center mt-2">Tap above if you are on mobile</p>
+
+            <!-- Auto-Check Status -->
+            <div class="mt-4 bg-blue-50 p-3 rounded-md border border-blue-200">
+                <p class="text-xs text-blue-800 text-center">
+                    🔄 <span id="polling-status">Checking payment status automatically...</span>
+                </p>
+            </div>
+
+            <!-- Manual Confirmation -->
+            <div class="mt-4 border-t pt-4 bg-green-50 p-4 rounded-md">
+                <p class="text-sm text-green-800 mb-3 font-medium text-center">
+                    ✅ Payment Completed in Paytm?
+                </p>
+                <button onclick="markAsCompleted()"
+                    class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-green-700 transition text-base mb-2">
+                    ✓ Yes, I've Paid - Update Status
+                </button>
+                <p class="text-xs text-gray-600 text-center">
+                    Click this after completing payment in Paytm app
+                </p>
+            </div>
+
+            <!-- Advanced: Enter UTR -->
+            <div class="mt-4">
+                <details class="bg-gray-50 p-3 rounded-md">
+                    <summary class="cursor-pointer text-sm text-gray-700 font-medium">
+                        📝 Have UTR/Transaction ID? (Optional)
+                    </summary>
+                    <div class="mt-3">
+                        <input type="text" id="utrInput" placeholder="Enter UTR/RRN from Paytm"
+                            class="w-full p-2 border rounded text-sm mb-2">
+                        <button onclick="manualVerifyWithUTR()"
+                            class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm">
+                            Submit UTR
+                        </button>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="mt-6 border-t pt-4">
+            <details class="text-sm text-gray-600">
+                <summary class="cursor-pointer font-semibold">ℹ️ How it works</summary>
+                <ul class="mt-2 list-disc list-inside space-y-1">
+                    <li>✅ Direct UPI integration (like Android apps)</li>
+                    <li>✅ No payment gateway fees</li>
+                    <li>✅ Works with any UPI app</li>
+                    <li>✅ No ₹2,000 limit (uses mode=02)</li>
+                    <li>⚠️ Manual confirmation required</li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        // Detect if we're running on localhost and need the /Ind6TokenVendor path
+        const currentPath = window.location.pathname;
+        const currentOrigin = window.location.origin;
+        const hostname = window.location.hostname;
+
+        // Check if we're on localhost or local IP
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isLocalIP = hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.');
+        // Detect ngrok - check if hostname contains 'ngrok' (covers all variations: .ngrok.io, .ngrok-free.dev, .ngrok.app, etc.)
+        const isNgrok = hostname.includes('ngrok');
+        const isInPublicFolder = currentPath.includes('/Ind6TokenVendor/public/');
+
+        let API_BASE;
+        if (isNgrok) {
+            // For ngrok, use the ngrok URL + /Ind6TokenVendor path
+            API_BASE = `${currentOrigin}/Ind6TokenVendor`;
+        } else if (isInPublicFolder || isLocalhost || isLocalIP) {
+            // For localhost or local IP, construct the base URL with /Ind6TokenVendor
+            const protocol = window.location.protocol;
+            API_BASE = `${protocol}//${hostname}/Ind6TokenVendor`;
+        } else {
+            // Production or other environments
+            API_BASE = currentOrigin;
+        }
+
+        const API_URL = `${API_BASE}/api/payment`;
+        const VENDOR_ID = 1;
+
+        // Debug logging - shows in browser console
+        console.log('🔧 API Config:', {
+            hostname,
+            isLocalhost,
+            isLocalIP,
+            isNgrok,
+            currentPath,
+            API_BASE,
+            API_URL
+        });
+
+        // Global transaction tracking
+        let currentTxnId = null;
+        let currentTxnRefId = null;
+        let queryInterval = null;
+
+        // Auto-query status every 5 seconds
+        function startStatusPolling() {
+            if (queryInterval) clearInterval(queryInterval);
+
+            queryInterval = setInterval(async () => {
+                if (currentTxnId) {
+                    await queryPaymentStatus();
+                }
+            }, 5000);
+        }
+
+        function stopStatusPolling() {
+            if (queryInterval) {
+                clearInterval(queryInterval);
+                queryInterval = null;
+            }
+        }
+
+        // Query payment status
+        async function queryPaymentStatus() {
+            if (!currentTxnId) return;
+
+            try {
+                const response = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction_id: currentTxnId })
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('Query returned non-JSON response');
+                    return;
+                }
+
+                const res = await response.json();
+
+                if (response.ok && res.transaction_status) {
+                    document.getElementById('status').innerHTML = `Status: <b class="text-blue-600">${res.transaction_status.toUpperCase()}</b>`;
+
+                    // Update polling status
+                    const pollingStatus = document.getElementById('polling-status');
+                    if (pollingStatus) {
+                        pollingStatus.textContent = `Last checked: ${new Date().toLocaleTimeString()} - Status: ${res.transaction_status}`;
+                    }
+
+                    if (res.transaction_status === 'success') {
+                        stopStatusPolling();
+                        showSuccess(`🎉 Payment successful! UTR: ${res.utr || 'N/A'}`);
+                        document.getElementById('payment-area').classList.add('hidden');
+                    } else if (res.transaction_status === 'failed') {
+                        stopStatusPolling();
+                        showError('Payment failed. Please try again.');
+                    } else if (res.transaction_status === 'pending') {
+                        if (pollingStatus) {
+                            pollingStatus.textContent = 'Waiting for payment... Please complete payment in Paytm app.';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Query failed:', e);
+            }
+        }
+
+        // Quick mark as completed (without UTR)
+        async function markAsCompleted() {
+            if (!currentTxnId) {
+                showError('No active transaction');
+                return;
+            }
+
+            if (!confirm('Have you completed the payment in Paytm?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction_id: currentTxnId,
+                        status: 'SUCCESS',
+                        approval_ref_no: 'MANUAL_' + Date.now(), // Temporary UTR
+                        response_code: '00',
+                        txn_ref_id: currentTxnRefId
+                    })
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned an error page. Check console for details.');
+                }
+
+                const res = await response.json();
+
+                if (response.ok) {
+                    stopStatusPolling();
+                    showSuccess('✅ Payment marked as completed! Please verify the payment in admin panel.');
+                    document.getElementById('payment-area').classList.add('hidden');
+                } else {
+                    throw new Error(res.message || 'Verification failed');
+                }
+            } catch (e) {
+                showError('Verification failed: ' + e.message);
+            }
+        }
+
+        // Manual verification with UTR input
+        async function manualVerifyWithUTR() {
+            if (!currentTxnId) {
+                showError('No active transaction');
+                return;
+            }
+
+            const utr = document.getElementById('utrInput').value.trim();
+            if (!utr) {
+                showError('Please enter UTR/Transaction ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction_id: currentTxnId,
+                        status: 'SUCCESS',
+                        approval_ref_no: utr,
+                        response_code: '00',
+                        txn_ref_id: currentTxnRefId
+                    })
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned an error page. Check console for details.');
+                }
+
+                const res = await response.json();
+
+                if (response.ok) {
+                    stopStatusPolling();
+                    showSuccess(`✅ Payment verified with UTR: ${utr}`);
+                    document.getElementById('payment-area').classList.add('hidden');
+                } else {
+                    throw new Error(res.message || 'Verification failed');
+                }
+            } catch (e) {
+                showError('Verification failed: ' + e.message);
+            }
+        }
+
+        // Original manual verification (when user confirms payment)
+        async function manualVerify() {
+            if (!currentTxnId) {
+                showError('No active transaction');
+                return;
+            }
+
+            const utr = prompt('Enter UPI Reference Number (UTR/RRN) from your payment app:');
+            if (!utr) return;
+
+            try {
+                const response = await fetch(`${API_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction_id: currentTxnId,
+                        status: 'SUCCESS',
+                        approval_ref_no: utr,
+                        response_code: '00',
+                        txn_ref_id: currentTxnRefId
+                    })
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned an error page. Check console for details.');
+                }
+
+                const res = await response.json();
+
+                if (response.ok) {
+                    stopStatusPolling();
+                    showSuccess(`Payment verified! UTR: ${utr}`);
+                    document.getElementById('payment-area').classList.add('hidden');
+                } else {
+                    throw new Error(res.message || 'Verification failed');
+                }
+            } catch (e) {
+                showError('Verification failed: ' + e.message);
+            }
+        }
+
+        // Initiate payment
+        async function initiatePayment() {
+            const amount = document.getElementById('amount').value;
+
+            if (!amount || amount <= 0) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            hideMessages();
+            document.getElementById('status').innerText = 'Initiating payment...';
+
+            try {
+                const response = await fetch(`${API_URL}/initiate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vendor_id: VENDOR_ID,
+                        amount: amount
+                    })
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned an error page. Check console for details. URL: ' + `${API_URL}/initiate`);
+                }
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.messages?.error || data.message || 'Error');
+
+                // Store transaction IDs
+                currentTxnId = data.transaction_id;
+                currentTxnRefId = data.txn_ref_id;
+
+                document.getElementById('status').innerHTML = `
+                    Transaction: <b>${data.transaction_id}</b><br>
+                    Amount: <b>₹${amount}</b><br>
+                    VPA: <b>${data.payment_info.payee_vpa || data.bank_details.upi_id}</b>
+                `;
+
+                // Set deep links
+                const upiUrl = data.upi_intent;
+                const paytmUrl = data.paytm_intent;
+
+                if (!upiUrl) {
+                    throw new Error('No UPI intent URL received');
+                }
+
+                // Set both UPI and Paytm links
+                document.getElementById('deepLink').href = upiUrl;
+                if (paytmUrl) {
+                    document.getElementById('paytmLink').href = paytmUrl;
+                    console.log('Paytm Link:', paytmUrl);
+                }
+
+                // Generate QR Code
+                const qrContent = data.upi_qr_string || data.upi_intent;
+                document.getElementById('qrcode').innerHTML = "";
+                new QRCode(document.getElementById("qrcode"), {
+                    text: qrContent,
+                    width: 150,
+                    height: 150
+                });
+
+                // Show payment options
+                document.getElementById('payment-area').classList.remove('hidden');
+
+                // Start auto-polling
+                startStatusPolling();
+
+                showInfo('Payment initiated! Choose your preferred payment method below.');
+
+            } catch (error) {
+                console.error(error);
+                showError(error.message);
+                stopStatusPolling();
+            }
+        }
+
+        // Helper functions
+        function showSuccess(message) {
+            hideMessages();
+            const el = document.getElementById('success-msg');
+            document.getElementById('success-text').innerText = message;
+            el.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            hideMessages();
+            const el = document.getElementById('error-msg');
+            document.getElementById('error-text').innerText = message;
+            el.classList.remove('hidden');
+        }
+
+        function showInfo(message) {
+            hideMessages();
+            const el = document.getElementById('success-msg');
+            el.className = 'bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4';
+            document.getElementById('success-text').innerText = message;
+            el.classList.remove('hidden');
+        }
+
+        function hideMessages() {
+            document.getElementById('success-msg').classList.add('hidden');
+            document.getElementById('error-msg').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

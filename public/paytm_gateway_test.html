@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paytm Payment Gateway Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">💳 Paytm Gateway Test</h1>
+        <p class="text-sm text-center text-gray-600 mb-4">Automatic Payment Verification</p>
+
+        <div id="success-msg"
+            class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+            <strong class="font-bold">Success!</strong>
+            <span class="block sm:inline" id="success-text">Payment completed.</span>
+        </div>
+
+        <div id="error-msg"
+            class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="error-text">Something went wrong.</span>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Amount (INR)</label>
+            <input type="number" id="amount" value="10.00"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Enter amount">
+        </div>
+
+        <button id="payBtn" onclick="initiatePayment()"
+            class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
+            💳 Pay with Paytm Gateway
+        </button>
+
+        <div id="status" class="mt-4 text-center text-sm font-mono text-gray-600"></div>
+
+        <!-- Payment Form (Hidden) -->
+        <form id="paytmForm" method="post" action="" style="display:none;">
+            <input type="hidden" name="MID" id="MID">
+            <input type="hidden" name="WEBSITE" id="WEBSITE">
+            <input type="hidden" name="INDUSTRY_TYPE_ID" id="INDUSTRY_TYPE_ID">
+            <input type="hidden" name="CHANNEL_ID" id="CHANNEL_ID">
+            <input type="hidden" name="ORDER_ID" id="ORDER_ID">
+            <input type="hidden" name="CUST_ID" id="CUST_ID">
+            <input type="hidden" name="TXN_AMOUNT" id="TXN_AMOUNT">
+            <input type="hidden" name="CALLBACK_URL" id="CALLBACK_URL">
+            <input type="hidden" name="CHECKSUMHASH" id="CHECKSUMHASH">
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin.includes('ngrok')
+            ? window.location.origin + '/Ind6TokenVendor'
+            : window.location.origin + '/Ind6TokenVendor';
+        const VENDOR_ID = 1;
+        let currentOrderId = null;
+        let checkInterval = null;
+
+        async function initiatePayment() {
+            const amount = document.getElementById('amount').value;
+
+            if (!amount || amount <= 0) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            hideMessages();
+            document.getElementById('status').innerText = 'Initiating payment...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/paytm/initiate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vendor_id: VENDOR_ID,
+                        amount: amount
+                    })
+                });
+
+                const data = await response.json();
+
+                console.log('Paytm Response:', data);
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to initiate payment');
+                }
+
+                currentOrderId = data.order_id;
+
+                // Fill form with Paytm parameters
+                const form = document.getElementById('paytmForm');
+                form.action = data.payment_url;
+
+                console.log('Paytm Params:', data.params);
+
+                Object.keys(data.params).forEach(key => {
+                    let input = document.getElementById(key);
+                    if (!input) {
+                        // Create input if it doesn't exist
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.id = key;
+                        form.appendChild(input);
+                    }
+                    input.value = data.params[key];
+                    console.log(`Set ${key} = ${data.params[key]}`);
+                });
+
+                document.getElementById('status').innerHTML = `
+                    Order ID: <b>${data.order_id}</b><br>
+                    Amount: <b>₹${amount}</b><br>
+                    <span class="text-blue-600">Redirecting to Paytm...</span>
+                `;
+
+                // Submit form to Paytm
+                setTimeout(() => {
+                    console.log('Submitting form to:', form.action);
+                    form.submit();
+                    // Start checking status
+                    startStatusChecking();
+                }, 1000);
+
+            } catch (error) {
+                console.error(error);
+                showError(error.message);
+            }
+        }
+
+        function startStatusChecking() {
+            if (checkInterval) clearInterval(checkInterval);
+
+            checkInterval = setInterval(async () => {
+                if (currentOrderId) {
+                    await checkPaymentStatus();
+                }
+            }, 1000); // Check every 1 second
+        }
+
+        async function checkPaymentStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/paytm/check-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: currentOrderId })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    clearInterval(checkInterval);
+                    showSuccess(`🎉 Payment Successful! TXN ID: ${data.txn_id}`);
+                    document.getElementById('status').innerHTML = `<b class="text-green-600">PAYMENT COMPLETED</b>`;
+                } else if (data.status === 'error') {
+                    clearInterval(checkInterval);
+                    showError(data.error || 'Payment failed');
+                    document.getElementById('status').innerHTML = `<b class="text-red-600">PAYMENT FAILED</b>`;
+                } else {
+                    // Still pending
+                    document.getElementById('status').innerHTML = `
+                        <span class="text-blue-600">⏳ Checking payment status...</span>
+                    `;
+                }
+            } catch (error) {
+                console.error('Status check failed:', error);
+            }
+        }
+
+        function showSuccess(message) {
+            hideMessages();
+            document.getElementById('success-text').innerText = message;
+            document.getElementById('success-msg').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            hideMessages();
+            document.getElementById('error-text').innerText = message;
+            document.getElementById('error-msg').classList.remove('hidden');
+        }
+
+        function hideMessages() {
+            document.getElementById('success-msg').classList.add('hidden');
+            document.getElementById('error-msg').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>
