@@ -5,7 +5,7 @@ Options -Indexes
     RewriteEngine On
     
     # Redirect to public folder if not already there
-    RewriteCond %{REQUEST_URI} !^/Ind6TokenVendor/public/
+    RewriteCond %{REQUEST_URI} !^/public/
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ public/$1 [L]
@@ -18,5 +18,5 @@ Options -Indexes
 
 # If mod_rewrite is not available, redirect via index.php
 <IfModule !mod_rewrite.c>
-    ErrorDocument 404 /Ind6TokenVendor/public/index.php
+    ErrorDocument 404 /public/index.php
 </IfModule>
