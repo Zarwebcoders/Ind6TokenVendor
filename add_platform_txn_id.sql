@@ -1,9 +1,9 @@
--- Add missing platform_txn_id column to payments table
+-- Add missing platform_txn_id column to payment table
 -- This column stores the transaction ID from payment gateways (LocalPaisa, PayRaizen, etc.)
 
 -- Check if column exists before adding
 SET @dbname = DATABASE();
-SET @tablename = "payments";
+SET @tablename = "payment";
 SET @columnname = "platform_txn_id";
 SET @preparedStatement = (SELECT IF(
   (
@@ -37,6 +37,6 @@ EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
 
 -- Verify the column was added
-DESCRIBE payments;
+DESCRIBE payment;
 
 SELECT 'Migration completed successfully!' AS status;

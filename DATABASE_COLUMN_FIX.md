@@ -8,7 +8,7 @@ Failed to create payment: Unknown column 'platform_txn_id' in 'INSERT INTO'
 
 ## ✅ Solution
 
-The `payments` table is missing the `platform_txn_id` column. This column stores the transaction ID from payment gateways (LocalPaisa, PayRaizen, etc.).
+The `payment` table is missing the `platform_txn_id` column. This column stores the transaction ID from payment gateways (LocalPaisa, PayRaizen, etc.).
 
 ---
 
@@ -23,7 +23,7 @@ The `payments` table is missing the `platform_txn_id` column. This column stores
 5. **Paste this code:**
 
 ```sql
-ALTER TABLE payments 
+ALTER TABLE payment 
 ADD COLUMN platform_txn_id VARCHAR(255) NULL AFTER id,
 ADD INDEX idx_platform_txn_id (platform_txn_id);
 ```
@@ -63,7 +63,7 @@ Enter your database password when prompted.
 After running the SQL, verify:
 
 ```sql
-DESCRIBE payments;
+DESCRIBE payment;
 ```
 
 You should see `platform_txn_id` in the column list.
@@ -72,7 +72,7 @@ You should see `platform_txn_id` in the column list.
 
 ## 📝 Complete Database Schema
 
-After this fix, your `payments` table should have these columns:
+After this fix, your `payment` table should have these columns:
 
 ```
 id                  - INT (Primary Key)
@@ -178,7 +178,7 @@ git pull origin main
 **Just run that one SQL command in phpMyAdmin and your payment will work!** 🚀
 
 ```sql
-ALTER TABLE payments 
+ALTER TABLE payment 
 ADD COLUMN platform_txn_id VARCHAR(255) NULL AFTER id,
 ADD INDEX idx_platform_txn_id (platform_txn_id);
 ```
