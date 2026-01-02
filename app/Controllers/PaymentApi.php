@@ -15,12 +15,12 @@ class PaymentApi extends ResourceController
     public function initiate()
     {
         $request = \Config\Services::request();
-        
+
         // Try to get vendor_id from session (Dashboard usage) or Input (App usage)
-        $vendorId = session()->get('id'); 
-        
+        $vendorId = session()->get('id');
+
         $input = $request->getJSON(true); // Get JSON input
-        
+
         if (!$vendorId && isset($input['vendor_id'])) {
             $vendorId = $input['vendor_id'];
         }
@@ -42,12 +42,12 @@ class PaymentApi extends ResourceController
         // Modified: Fetch GLOBAL active bank details (not vendor specific) as per requirement.
         // We prioritize the 'default' one, or just the first active one found.
         $bankDetails = $bankModel->where('active', 1)
-                                 ->orderBy('is_default', 'DESC') // specific preference
-                                 ->orderBy('id', 'ASC')
-                                 ->first();
+            ->orderBy('is_default', 'DESC') // specific preference
+            ->orderBy('id', 'ASC')
+            ->first();
 
         if (!$bankDetails) {
-             return $this->fail('No active bank details found in the system. Please configure them in Utilities.', 400);
+            return $this->fail('No active bank details found in the system. Please configure them in Utilities.', 400);
         }
 
         // 2. Generate Transaction ID
@@ -55,12 +55,12 @@ class PaymentApi extends ResourceController
 
         // 3. Create Pending Record
         $paymentData = [
-            'vendor_id'    => $vendorId,
-            'amount'       => $amount,
-            'txn_id'       => $txnId,
-            'status'       => 'pending',
-            'method'       => 'gateway_api',
-            'created_at'   => date('Y-m-d H:i:s')
+            'vendor_id' => $vendorId,
+            'amount' => $amount,
+            'txn_id' => $txnId,
+            'status' => 'pending',
+            'method' => 'gateway_api',
+            'created_at' => date('Y-m-d H:i:s')
         ];
 
         try {
@@ -71,22 +71,22 @@ class PaymentApi extends ResourceController
 
         // 4. Generate UPI Intent String (For App Deep Linking)
         // Format: upi://pay?pa={upi_id}&pn={name}&am={amount}&tr={txn_id}&cu=INR&tn={note}
-        
+
         // UPI Configuration - Update these with your actual details
         $upiId = "abuzarmunshi12-2@okaxis"; // Your UPI ID
         $payeeName = "Zarwebcoders"; // Your business/account name
-        
+
         // Paytm Merchant Configuration (Test Credentials)
         $paytmMerchantId = "hhdaGX54213527799734"; // Paytm Test Merchant ID
         $paytmMerchantKey = "1OLuORB&@k13LBXv"; // Paytm Test Merchant Key (Secret Key)
         $paytmMerchantCode = "4722"; // Merchant Category Code (MCC)
-        
+
         // Format amount properly (2 decimal places)
-        $fmtAmount = number_format((float)$amount, 2, '.', '');
-        
+        $fmtAmount = number_format((float) $amount, 2, '.', '');
+
         // Create payment note
         $note = "Payment for Order {$txnId}";
-        
+
         // URL encode the name and note (but NOT the UPI ID)
         $encodedName = urlencode($payeeName);
         $encodedNote = urlencode($note);
@@ -94,33 +94,33 @@ class PaymentApi extends ResourceController
         // Standard UPI Intent Link (works with all UPI apps: GPay, PhonePe, Paytm, etc.)
         // Format: upi://pay?pa=UPI_ID&pn=NAME&tr=TXN_ID&am=AMOUNT&cu=CURRENCY&tn=NOTE
         $intentLink = "upi://pay?pa={$upiId}&pn={$encodedName}&tr={$txnId}&am={$fmtAmount}&cu=INR&tn={$encodedNote}";
-        
+
         // Paytm-Specific Deep Link (paytmmp://)
         // This format is specifically for Paytm app and includes merchant code and signature
         // Generate signature using Paytm Merchant Key
         $signatureData = "{$upiId}|{$payeeName}|{$fmtAmount}|{$txnId}|{$paytmMerchantKey}";
         $signature = base64_encode(hash('sha256', $signatureData, true));
-        
+
         // Paytm deep link format with merchant ID
         $paytmLink = "paytmmp://cash_wallet?pa={$upiId}&pn={$encodedName}&am={$fmtAmount}&cu=INR&tn={$encodedNote}&tr={$txnId}&mc={$paytmMerchantCode}&mid={$paytmMerchantId}&sign={$signature}&featuretype=money_transfer";
-        
+
         // Short Link (For QR) - MINIMAL to avoid QR code length overflow
         // Remove the note to keep it short enough for QR codes (max ~1000 chars)
         $qrLink = "upi://pay?pa={$upiId}&pn={$encodedName}&tr={$txnId}&am={$fmtAmount}&cu=INR";
 
         // 4. Return Data
         return $this->respond([
-            'status'         => 'initiated',
+            'status' => 'initiated',
             'transaction_id' => $txnId,
-            'payment_info'   => [
+            'payment_info' => [
                 'amount' => $amount,
                 'currency' => 'INR',
                 'payee_vpa' => $upiId
             ],
-            'bank_details'   => $bankDetails,
-            'upi_intent'     => $intentLink,
-            'paytm_intent'   => $paytmLink,  // Paytm-specific deep link
-            'upi_qr_string'  => $qrLink
+            'bank_details' => $bankDetails,
+            'upi_intent' => $intentLink,
+            'paytm_intent' => $paytmLink,  // Paytm-specific deep link
+            'upi_qr_string' => $qrLink
         ]);
     }
 
@@ -150,7 +150,7 @@ class PaymentApi extends ResourceController
 
         // Data to update
         $updateData = [
-            'status'     => $status,
+            'status' => $status,
             'updated_at' => date('Y-m-d H:i:s')
         ];
 
@@ -163,7 +163,7 @@ class PaymentApi extends ResourceController
         try {
             $paymentModel->update($payment['id'], $updateData);
         } catch (\Exception $e) {
-             return $this->failServerError('Database error details: ' . $e->getMessage());
+            return $this->failServerError('Database error details: ' . $e->getMessage());
         }
 
         return $this->respond([
@@ -279,12 +279,12 @@ class PaymentApi extends ResourceController
     public function createPayraizenRequest()
     {
         $request = \Config\Services::request();
-        
+
         // Try to get vendor_id from session (Dashboard usage) or Input (App usage)
-        $vendorId = session()->get('id'); 
-        
+        $vendorId = session()->get('id');
+
         $input = $request->getJSON(true);
-        
+
         if (!$vendorId && isset($input['vendor_id'])) {
             $vendorId = $input['vendor_id'];
         }
@@ -322,13 +322,13 @@ class PaymentApi extends ResourceController
         // Create pending payment record
         $paymentModel = new \App\Models\PaymentModel();
         $paymentData = [
-            'vendor_id'    => $vendorId,
-            'amount'       => $amount,
-            'txn_id'       => $txnId,
-            'status'       => 'pending',
-            'method'       => 'payraizen_gateway',
+            'vendor_id' => $vendorId,
+            'amount' => $amount,
+            'txn_id' => $txnId,
+            'status' => 'pending',
+            'method' => 'payraizen_gateway',
             'gateway_name' => 'payraizen',
-            'created_at'   => date('Y-m-d H:i:s')
+            'created_at' => date('Y-m-d H:i:s')
         ];
 
         try {
@@ -361,21 +361,43 @@ class PaymentApi extends ResourceController
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
+        // Add timeout settings to prevent long hangs
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30); // 30 seconds to connect
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 seconds total execution time
+
+        // SSL settings - try to verify SSL, but allow fallback for testing
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+        // Follow redirects
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+
+        // Log the request for debugging
+        log_message('info', 'Payraizen API Request - URL: ' . $url . ', Data: ' . json_encode($data));
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
+        $curlErrno = curl_errno($ch);
+        $curlInfo = curl_getinfo($ch);
         curl_close($ch);
 
         // Check for cURL errors
         if ($curlError) {
-            log_message('error', 'Payraizen cURL Error: ' . $curlError);
-            
+            log_message('error', 'Payraizen cURL Error: ' . $curlError . ' (Error Code: ' . $curlErrno . ')');
+            log_message('error', 'cURL Info: ' . json_encode($curlInfo));
+
             // Update payment status to failed
             try {
                 $payment = $paymentModel->where('txn_id', $txnId)->first();
                 $paymentModel->update($payment['id'], [
                     'status' => 'failed',
-                    'gateway_response' => json_encode(['curl_error' => $curlError])
+                    'gateway_response' => json_encode([
+                        'curl_error' => $curlError,
+                        'curl_errno' => $curlErrno,
+                        'curl_info' => $curlInfo
+                    ])
                 ]);
             } catch (\Exception $e) {
                 log_message('error', 'Failed to update payment status: ' . $e->getMessage());
@@ -384,9 +406,15 @@ class PaymentApi extends ResourceController
             return $this->fail([
                 'message' => 'Failed to connect to payment gateway',
                 'error' => $curlError,
+                'error_code' => $curlErrno,
                 'debug_info' => [
                     'api_url' => $url,
-                    'transaction_id' => $txnId
+                    'transaction_id' => $txnId,
+                    'connection_info' => [
+                        'total_time' => $curlInfo['total_time'] ?? 'N/A',
+                        'namelookup_time' => $curlInfo['namelookup_time'] ?? 'N/A',
+                        'connect_time' => $curlInfo['connect_time'] ?? 'N/A',
+                    ]
                 ]
             ], 500);
         }
@@ -398,7 +426,7 @@ class PaymentApi extends ResourceController
 
         if (isset($responseData['status']) && $responseData['status'] === 'true') {
             $gatewayOrderId = $responseData['order_details']['tid'];
-            
+
             // Update payment record with gateway order ID
             try {
                 $payment = $paymentModel->where('txn_id', $txnId)->first();
@@ -439,7 +467,7 @@ class PaymentApi extends ResourceController
 
             // Return detailed error information
             $errorMessage = $responseData['msg'] ?? $responseData['message'] ?? 'Payment initiation failed.';
-            
+
             return $this->fail([
                 'message' => $errorMessage,
                 'gateway_error' => $responseData,
@@ -460,7 +488,7 @@ class PaymentApi extends ResourceController
     public function handlePayraizenWebhook()
     {
         $request = \Config\Services::request();
-        
+
         try {
             // Get the JSON payload from the request
             $payload = $request->getJSON(true);
@@ -511,7 +539,7 @@ class PaymentApi extends ResourceController
 
             try {
                 $paymentModel->update($payment['id'], $updateData);
-                
+
                 log_message('info', 'Payraizen Webhook: Payment updated successfully - TXN: ' . $payment['txn_id'] . ', Status: ' . ($updateData['status'] ?? 'unknown'));
 
                 return $this->respond([
