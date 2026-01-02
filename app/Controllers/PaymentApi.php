@@ -365,9 +365,26 @@ class PaymentApi extends ResourceController
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30); // 30 seconds to connect
         curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 seconds total execution time
 
-        // SSL settings - try to verify SSL, but allow fallback for testing
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        // SSL settings - Environment aware
+        // Production: Verify SSL for security
+        // Local/Development: Can disable via environment variable if needed
+        $verifySSL = getenv('PAYRAIZEN_VERIFY_SSL') !== 'false'; // Default: true (secure)
+
+        if ($verifySSL) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+            // Try to use system CA bundle or specify custom path
+            $caBundlePath = getenv('CURL_CA_BUNDLE');
+            if ($caBundlePath && file_exists($caBundlePath)) {
+                curl_setopt($ch, CURLOPT_CAINFO, $caBundlePath);
+            }
+        } else {
+            // Only for local development/testing
+            log_message('warning', 'PayRaizen API: SSL verification is DISABLED. This should only be used in development!');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        }
 
         // Follow redirects
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);

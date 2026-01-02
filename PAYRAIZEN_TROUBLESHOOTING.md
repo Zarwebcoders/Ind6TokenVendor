@@ -65,24 +65,20 @@ A comprehensive diagnostic page that tests:
 
 ## Quick Fix Options
 
-### Option A: Disable SSL Verification (Testing Only)
-⚠️ **WARNING: Only use this for testing, never in production!**
+### Option A: Disable SSL Verification via Environment Variable (Local Testing Only)
+⚠️ **WARNING: Only use this for LOCAL testing, never in production!**
 
-Edit `/app/Controllers/PaymentApi.php` around line 368-370:
-
-**Change from:**
-```php
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+Add this line to your `.env` file:
+```env
+PAYRAIZEN_VERIFY_SSL=false
 ```
 
-**Change to:**
-```php
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-```
+**For Production/Live Server:**
+- Do NOT add this to your production `.env` file
+- Production should always verify SSL certificates
+- If you get SSL errors in production, use Option B instead
 
-### Option B: Update CA Certificates (Recommended)
+### Option B: Update CA Certificates (Recommended for Production)
 
 1. Download the latest CA certificates:
    ```bash
