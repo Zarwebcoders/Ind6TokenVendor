@@ -1,0 +1,112 @@
+=================================================================
+CPANEL GIT PULL - QUICK FIX FOR .ENV CONFLICT
+=================================================================
+
+ERROR YOU'RE SEEING:
+-------------------
+error: Your local changes to the following files would be overwritten by merge:
+    .env
+Please commit your changes or stash them before you merge.
+Aborting
+
+
+WHY THIS HAPPENS:
+-----------------
+The .env file has been removed from Git tracking (as it should be).
+Your production .env has different settings than development.
+Git is protecting your production environment variables.
+
+
+SOLUTION - OPTION 1: AUTOMATED SCRIPT (EASIEST)
+------------------------------------------------
+Run this single command in cPanel Terminal:
+
+    bash fix-cpanel-pull.sh
+
+That's it! The script will:
+✅ Backup your production .env
+✅ Pull latest changes
+✅ Restore your production .env
+✅ Verify everything is correct
+
+
+SOLUTION - OPTION 2: MANUAL COMMANDS
+-------------------------------------
+If you prefer to run commands manually:
+
+# Step 1: Backup your production .env
+cp .env .env.production.backup
+
+# Step 2: Stash the .env file
+git stash push .env
+
+# Step 3: Pull latest changes
+git pull origin main
+
+# Step 4: Restore your production .env
+git stash pop
+
+# Step 5: Verify (optional)
+cat .env | grep -E "app.baseURL|CI_ENVIRONMENT|PAYRAIZEN_VERIFY_SSL"
+
+
+SOLUTION - OPTION 3: ONE-TIME PERMANENT FIX
+--------------------------------------------
+Run this ONCE to prevent future .env conflicts:
+
+    git update-index --skip-worktree .env
+
+Then you can always use:
+
+    git pull origin main
+
+Your .env will never be touched again!
+
+
+AFTER PULLING, VERIFY THESE SETTINGS:
+--------------------------------------
+Your production .env should have:
+
+✅ CI_ENVIRONMENT = production
+✅ app.baseURL = 'https://ind6vendorfinal.zarwebcoders.in/'
+✅ app.forceGlobalSecureRequests = true
+✅ PAYRAIZEN_VERIFY_SSL=true
+✅ Correct database credentials
+
+If any are wrong, edit .env file in cPanel File Manager.
+
+
+WHAT CHANGED IN LATEST COMMITS:
+--------------------------------
+Commit e89a594: Added automated fix script
+Commit c07084a: Removed .env from Git, added deployment guide
+Commit a8e508d: Fixed Payraizen connection timeout
+
+All safe to pull - your production .env won't be affected!
+
+
+NEED HELP?
+----------
+1. Check CPANEL_DEPLOYMENT.md for detailed guide
+2. Run: git status
+3. Contact support with error messages
+
+
+=================================================================
+QUICK REFERENCE - COPY & PASTE
+=================================================================
+
+# EASIEST - Run the automated script:
+bash fix-cpanel-pull.sh
+
+# OR - Manual 4-step process:
+git stash push .env
+git pull origin main
+git stash pop
+cat .env
+
+# OR - One-time permanent fix:
+git update-index --skip-worktree .env
+git pull origin main
+
+=================================================================
