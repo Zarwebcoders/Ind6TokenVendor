@@ -362,8 +362,19 @@ class PaymentApi extends ResourceController
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
         // Add timeout settings to prevent long hangs
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30); // 30 seconds to connect
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60 seconds total execution time
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15); // 15 seconds to connect (reduced from 30)
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30); // 30 seconds total execution time (reduced from 60)
+
+        // Force IPv4 resolution (fixes many MAMP connection issues)
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+
+        // DNS cache timeout
+        curl_setopt($ch, CURLOPT_DNS_CACHE_TIMEOUT, 120);
+
+        // Enable TCP keepalive
+        curl_setopt($ch, CURLOPT_TCP_KEEPALIVE, 1);
+        curl_setopt($ch, CURLOPT_TCP_KEEPIDLE, 120);
+        curl_setopt($ch, CURLOPT_TCP_KEEPINTVL, 60);
 
         // SSL settings - Environment aware
         // Production: Verify SSL for security
@@ -376,8 +387,26 @@ class PaymentApi extends ResourceController
 
             // Try to use system CA bundle or specify custom path
             $caBundlePath = getenv('CURL_CA_BUNDLE');
+            if (!$caBundlePath || !file_exists($caBundlePath)) {
+                // Try common macOS CA bundle locations
+                $possiblePaths = [
+                    '/etc/ssl/cert.pem',
+                    '/usr/local/etc/openssl/cert.pem',
+                    '/usr/local/etc/openssl@1.1/cert.pem',
+                    '/Applications/MAMP/Library/OpenSSL/certs/cacert.pem'
+                ];
+
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        $caBundlePath = $path;
+                        break;
+                    }
+                }
+            }
+
             if ($caBundlePath && file_exists($caBundlePath)) {
                 curl_setopt($ch, CURLOPT_CAINFO, $caBundlePath);
+                log_message('info', 'Using CA bundle: ' . $caBundlePath);
             }
         } else {
             // Only for local development/testing
@@ -389,6 +418,9 @@ class PaymentApi extends ResourceController
         // Follow redirects
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+
+        // Set user agent
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Ind6TokenVendor/1.0');
 
         // Log the request for debugging
         log_message('info', 'Payraizen API Request - URL: ' . $url . ', Data: ' . json_encode($data));
