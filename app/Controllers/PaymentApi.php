@@ -348,7 +348,7 @@ class PaymentApi extends ResourceController
         ];
 
         $headers = [
-            'Authorization: Bearer ' . $token,
+            'Authorization: ' . $token,  // Payraizen expects token directly, no "Bearer" prefix
             'Content-Type: application/json',
             'accept: application/json'
         ];
@@ -771,7 +771,7 @@ class PaymentApi extends ResourceController
         ];
 
         $headers = [
-            'Authorization: Bearer ' . $token,
+            'Authorization: ' . $token,  // Payraizen expects token directly, no "Bearer" prefix
             'Content-Type: application/json',
             'accept: application/json'
         ];
