@@ -313,8 +313,8 @@ class PaymentApi extends ResourceController
         $userName = !empty($vendor['name']) ? $vendor['name'] : $this->generateRandomName();
 
         // Payraizen credentials (should be moved to .env in production)
-        $merchantId = '987654321'; // Replace with your actual merchant ID
-        $token = 'bnsgwvYeeTnFHA72YkiZ7RJEw0WgtO7cBbV8JcFK'; // Replace with your actual token
+        $merchantId = '25'; // Your actual merchant ID
+        $token = 'oE39Gq3Gkcv2gTvz8hePLi3cG4KVbc0Q2pkg4B5i'; // Your actual API token
 
         // Generate internal transaction ID
         $txnId = 'TXN_' . strtoupper(uniqid());
@@ -730,8 +730,8 @@ class PaymentApi extends ResourceController
         // }
 
         // Payraizen credentials
-        $merchantId = '987654321'; // Replace with your actual merchant ID
-        $token = 'bnsgwvYeeTnFHA72YkiZ7RJEw0WgtO7cBbV8JcFK'; // Replace with your actual token
+        $merchantId = '25'; // Your actual merchant ID
+        $token = 'oE39Gq3Gkcv2gTvz8hePLi3cG4KVbc0Q2pkg4B5i'; // Your actual API token
 
         // Generate internal transaction ID
         $txnId = 'PAYOUT_' . strtoupper(uniqid());
