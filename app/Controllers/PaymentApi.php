@@ -280,17 +280,13 @@ class PaymentApi extends ResourceController
     {
         $request = \Config\Services::request();
 
-        // Try to get vendor_id from session (Dashboard usage) or Input (App usage)
-        $vendorId = session()->get('id');
-
         $input = $request->getJSON(true);
 
-        if (!$vendorId && isset($input['vendor_id'])) {
-            $vendorId = $input['vendor_id'];
-        }
+        // Try to get vendor_id from input first, then session
+        $vendorId = $input['vendor_id'] ?? session()->get('id');
 
         if (!$vendorId) {
-            return $this->failUnauthorized('Vendor authentication failed.');
+            return $this->failUnauthorized('Vendor authentication failed. Please provide vendor_id in request body.');
         }
 
         $amount = $input['amount'] ?? 0;
@@ -689,16 +685,13 @@ class PaymentApi extends ResourceController
     {
         $request = \Config\Services::request();
 
-        // Try to get vendor_id from session or input
-        $vendorId = session()->get('id');
         $input = $request->getJSON(true);
 
-        if (!$vendorId && isset($input['vendor_id'])) {
-            $vendorId = $input['vendor_id'];
-        }
+        // Try to get vendor_id from input first, then session
+        $vendorId = $input['vendor_id'] ?? session()->get('id');
 
         if (!$vendorId) {
-            return $this->failUnauthorized('Vendor authentication failed.');
+            return $this->failUnauthorized('Vendor authentication failed. Please provide vendor_id in request body.');
         }
 
         // Validate required fields
