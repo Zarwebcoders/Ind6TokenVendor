@@ -48,6 +48,10 @@ $routes->post('api/payment/payraizen/initiate', 'PaymentApi::createPayraizenRequ
 $routes->post('api/payment/payraizen/webhook', 'PaymentApi::handlePayraizenWebhook');
 $routes->get('api/payment/payraizen/test-webhook', 'PaymentApi::testPayraizenWebhook'); // Test endpoint
 
+// Payraizen Payout Routes
+$routes->post('api/payout/payraizen/initiate', 'PaymentApi::createPayraizenPayout');
+$routes->post('api/payout/payraizen/webhook', 'PaymentApi::handlePayraizenPayoutWebhook');
+
 
 // LocalPaisa Gateway Routes
 $routes->post('api/payment/localpaisa/initiate', 'PaymentTest::createLocalPaisaRequest');
