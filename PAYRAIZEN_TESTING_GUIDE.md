@@ -1,290 +1,149 @@
-# Testing Payraizen Integration Without Real Credentials
+# Quick Testing Guide for Payraizen Webhook
 
-## Current Situation
+## 1. Access the Test Endpoint
 
-You're getting this error:
-```json
-{
-  "status": 200,
-  "error": 200,
-  "messages": {
-    "error": "Payment initiation failed."
-  }
-}
+Open your browser and visit:
+```
+https://ind6vendorfinal.zarwebcoders.in/api/payment/payraizen/test-webhook
 ```
 
-This means:
-- ✅ **API endpoint is working** (status 200)
-- ✅ **Routes are configured correctly**
-- ✅ **Controller method is executing**
-- ❌ **Payraizen API call is failing** (because credentials are placeholder values)
+This will show you:
+- ✅ Your webhook URL
+- ✅ Recent Payraizen payments
+- ✅ A test payload
+- ✅ A ready-to-use curl command
 
----
+## 2. Test the Webhook
 
-## Why It's Failing
+Copy the curl command from the test endpoint response and run it in your terminal.
 
-The current credentials in `PaymentApi.php` are test values:
-```php
-$merchantId = '987654321';  // Not a real merchant ID
-$token = 'bnsgwvYeeTnFHA72YkiZ7RJEw0WgtO7cBbV8JcFK';  // Not a real token
-```
-
-These will be rejected by Payraizen's API.
-
----
-
-## Solution Options
-
-### Option 1: Get Real Payraizen Credentials (Recommended)
-
-1. **Sign up for Payraizen:**
-   - Visit: https://partner.payraizen.com
-   - Create merchant account
-   - Complete KYC verification
-
-2. **Get API Credentials:**
-   - Login to merchant dashboard
-   - Go to API Settings
-   - Copy your Merchant ID and API Token
-
-3. **Update PaymentApi.php:**
-   ```php
-   // Line ~212 in PaymentApi.php
-   $merchantId = 'YOUR_REAL_MERCHANT_ID';
-   $token = 'YOUR_REAL_API_TOKEN';
-   ```
-
-4. **Test Again:**
-   - Use test page: `http://localhost/Ind6TokenVendor/test_payraizen.html`
-   - Should now work with real credentials
-
----
-
-### Option 2: Mock Payraizen for Testing
-
-If you don't have real credentials yet, you can create a mock version for testing:
-
-#### Step 1: Create Mock Gateway Method
-
-Add this method to `PaymentApi.php`:
-
-```php
-/**
- * Mock Payraizen Request (For Testing Only)
- * Simulates Payraizen response without calling real API
- */
-public function createMockPayraizenRequest()
-{
-    $request = \Config\Services::request();
-    
-    $vendorId = session()->get('id'); 
-    $input = $request->getJSON(true);
-    
-    if (!$vendorId && isset($input['vendor_id'])) {
-        $vendorId = $input['vendor_id'];
-    }
-
-    if (!$vendorId) {
-        return $this->failUnauthorized('Vendor authentication failed.');
-    }
-
-    $amount = $input['amount'] ?? 0;
-
-    if ($amount <= 0) {
-        return $this->fail('Invalid amount.');
-    }
-
-    // Generate transaction IDs
-    $txnId = 'TXN_' . strtoupper(uniqid());
-    $mockGatewayOrderId = 'MOCK_' . strtoupper(uniqid());
-
-    // Create pending payment record
-    $paymentModel = new \App\Models\PaymentModel();
-    $paymentData = [
-        'vendor_id'    => $vendorId,
-        'amount'       => $amount,
-        'txn_id'       => $txnId,
-        'status'       => 'pending',
-        'method'       => 'mock_payraizen',
-        'gateway_name' => 'payraizen_mock',
-        'gateway_order_id' => $mockGatewayOrderId,
-        'created_at'   => date('Y-m-d H:i:s')
-    ];
-
-    try {
-        $paymentModel->insert($paymentData);
-    } catch (\Exception $e) {
-        return $this->failServerError('Database error: ' . $e->getMessage());
-    }
-
-    // Mock UPI payment URL
-    $mockPaymentUrl = "upi://pay?pa=test@paytm&pn=TestMerchant&am={$amount}&tr={$txnId}&cu=INR";
-
-    // Return mock success response
-    return $this->respond([
-        'success' => true,
-        'status' => 'initiated',
-        'transaction_id' => $txnId,
-        'gateway_order_id' => $mockGatewayOrderId,
-        'payment_url' => $mockPaymentUrl,
-        'intent' => true,
-        'payment_info' => [
-            'amount' => $amount,
-            'currency' => 'INR'
-        ],
-        'note' => 'This is a MOCK response for testing. No real payment gateway was called.'
-    ]);
-}
-```
-
-#### Step 2: Add Mock Route
-
-Add to `app/Config/Routes.php`:
-```php
-$routes->post('api/payment/payraizen/mock', 'PaymentApi::createMockPayraizenRequest');
-```
-
-#### Step 3: Test Mock Endpoint
+Or use this generic test:
 
 ```bash
-curl -X POST http://localhost/Ind6TokenVendor/api/payment/payraizen/mock ^
-  -H "Content-Type: application/json" ^
-  -d "{\"vendor_id\":\"1\",\"amount\":100}"
+curl -X POST https://ind6vendorfinal.zarwebcoders.in/api/payment/payraizen/webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "true",
+    "msg": "Payin Webhook",
+    "order_details": {
+      "amount": 516,
+      "bank_utr": "TEST_451219086033",
+      "status": "success",
+      "tid": "PAYRIPS25260103125554369611",
+      "mid": "lysCjB0iJe",
+      "payee_vpa": "UPI"
+    }
+  }'
 ```
 
----
+## 3. Check the Response
 
-### Option 3: Use Your Existing Manual UPI Flow
-
-Since you already have a working manual UPI payment system, you can continue using that while waiting for Payraizen credentials:
-
-**Existing Endpoint:**
-```
-POST /api/payment/initiate
-```
-
-This uses your configured UPI ID and QR code without requiring Payraizen.
-
----
-
-## Viewing Detailed Error Information
-
-I've updated the error response to show more details. Try the API again and you'll now see:
-
+You should get a response like:
 ```json
 {
-  "status": 400,
-  "error": 400,
-  "messages": {
-    "error": {
-      "message": "Payment initiation failed.",
-      "gateway_error": {
-        // Full Payraizen error response
-      },
-      "http_code": 401,
-      "debug_info": {
-        "api_url": "https://partner.payraizen.com/tech/api/payin/create_intent",
-        "merchant_id": "987654321",
-        "transaction_id": "TXN_..."
-      }
-    }
-  }
+  "status": "success",
+  "message": "Payment status updated successfully",
+  "transaction_id": "TXN_XXXXX"
 }
 ```
 
-This will help identify the exact error from Payraizen.
+## 4. Monitor Logs
 
----
+In a separate terminal, watch the logs in real-time:
 
-## Check Logs
-
-View detailed logs:
 ```bash
-type writable\logs\log-2025-12-13.log
+tail -f /Applications/MAMP/htdocs/Ind6TokenVendor/writable/logs/log-$(date +%Y-%m-%d).log | grep -i payraizen
 ```
 
-Look for:
-- `Payraizen Response:` - Shows full API response
-- `Payraizen API Error` - Shows error details
-- `Payraizen cURL Error` - Shows connection issues
+## 5. Check Database
 
----
+Verify the payment was updated:
 
-## Testing Checklist
+```sql
+SELECT 
+    id,
+    txn_id,
+    gateway_order_id,
+    amount,
+    status,
+    utr,
+    created_at,
+    updated_at,
+    completed_time
+FROM payments 
+WHERE gateway_name = 'payraizen'
+ORDER BY created_at DESC 
+LIMIT 5;
+```
 
-- [ ] API endpoint responds (status 200) ✅ **DONE**
-- [ ] Routes configured correctly ✅ **DONE**
-- [ ] Database migration run ✅ **DONE**
-- [ ] Vendor exists in database ✅ **DONE**
-- [ ] Get real Payraizen credentials ⏳ **PENDING**
-- [ ] Update credentials in code ⏳ **PENDING**
-- [ ] Test with real credentials ⏳ **PENDING**
+## Expected Log Messages
 
----
+✅ **Success Flow:**
+```
+Payraizen Webhook Raw Input: {...}
+Payraizen Webhook Received {...}
+Payraizen Webhook Processing: TID=..., Status=success, UTR=...
+Payment updated successfully - TXN: TXN_XXX, Status: success, UTR: ...
+```
 
-## What Works Right Now
+⚠️ **Payment Not Found (will use fallback):**
+```
+Payraizen Webhook Error: Payment not found for gateway order ID: ...
+Payraizen Webhook: Found payment by amount matching - TXN: ...
+Payment updated successfully - TXN: TXN_XXX, Status: success, UTR: ...
+```
 
-✅ **Your Current System:**
-- Manual UPI payment with QR code
-- Bank details configuration
-- Payment tracking
-- Transaction history
+❌ **Error (but still responds):**
+```
+Payraizen Webhook Error: ...
+Webhook acknowledged with error
+```
 
-✅ **Payraizen Integration (Technical):**
-- API endpoints created
-- Database schema updated
-- Webhook handler ready
-- Error handling implemented
+## Troubleshooting
 
-❌ **What Needs Real Credentials:**
-- Actual payment initiation through Payraizen
-- Automatic UTR capture
-- Webhook notifications
+### Issue: "Payment not found"
+**Solution:** The webhook is working, but the payment record doesn't exist or the `gateway_order_id` doesn't match. Check:
+1. Did the payment initiation succeed?
+2. Was the `gateway_order_id` saved correctly?
+3. Does the amount match?
 
----
+### Issue: Still getting timeouts
+**Possible causes:**
+1. Server timeout settings too low
+2. Database connection slow
+3. Network issues between Payraizen and your server
 
-## Recommended Next Steps
+**Check server timeout:**
+```bash
+# Check PHP max_execution_time
+php -i | grep max_execution_time
 
-### Short Term (Testing)
-1. Use the mock endpoint I provided above
-2. Or continue using your existing manual UPI flow
-3. Test the overall system functionality
+# Check Apache/Nginx timeout settings
+```
 
-### Long Term (Production)
-1. Sign up for Payraizen merchant account
-2. Get API credentials
-3. Update PaymentApi.php with real credentials
-4. Test with small amount
-5. Configure webhook URL
-6. Go live
+### Issue: Webhook not being called
+**Solution:** 
+1. Verify webhook URL with Payraizen support
+2. Check server firewall allows incoming POST requests
+3. Verify SSL certificate is valid
 
----
+## Production Checklist
 
-## Alternative Payment Gateways
+Before going live:
+- [ ] Remove or secure the test endpoint (`/api/payment/payraizen/test-webhook`)
+- [ ] Verify webhook URL with Payraizen: `https://ind6vendorfinal.zarwebcoders.in/api/payment/payraizen/webhook`
+- [ ] Test with real payment (small amount)
+- [ ] Monitor logs for 24 hours
+- [ ] Set up alerts for failed webhooks
+- [ ] Document the payment flow for your team
 
-If Payraizen doesn't work for you, consider these alternatives:
+## Support
 
-1. **Razorpay** - Popular in India, easy integration
-2. **Cashfree** - Good UPI support
-3. **PayU** - Established gateway
-4. **Instamojo** - Good for small businesses
-5. **PhonePe Payment Gateway** - Direct UPI integration
-
-All of these have similar integration patterns and can be added to your system.
-
----
-
-## Summary
-
-**Current Status:**
-- ✅ Integration code is complete and working
-- ✅ API endpoints are functional
-- ❌ Need real Payraizen credentials to process actual payments
-
-**You can:**
-1. Get real Payraizen credentials (recommended)
-2. Use the mock endpoint for testing
-3. Continue with your existing manual UPI system
-4. Consider alternative payment gateways
-
-The technical implementation is solid - you just need the credentials to connect to the real payment gateway! 🎯
+If issues persist:
+1. Check the detailed documentation: `PAYRAIZEN_WEBHOOK_FIX.md`
+2. Review logs for specific error messages
+3. Contact Payraizen support with:
+   - Your webhook URL
+   - Sample webhook payload
+   - Timestamp of failed attempts
+   - Your merchant ID

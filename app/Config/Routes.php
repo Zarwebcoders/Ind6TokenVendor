@@ -46,6 +46,8 @@ $routes->post('api/payment/update', 'PaymentApi::updateStatus'); // Manual updat
 // Payraizen Gateway Routes
 $routes->post('api/payment/payraizen/initiate', 'PaymentApi::createPayraizenRequest');
 $routes->post('api/payment/payraizen/webhook', 'PaymentApi::handlePayraizenWebhook');
+$routes->get('api/payment/payraizen/test-webhook', 'PaymentApi::testPayraizenWebhook'); // Test endpoint
+
 
 // LocalPaisa Gateway Routes
 $routes->post('api/payment/localpaisa/initiate', 'PaymentTest::createLocalPaisaRequest');

@@ -539,28 +539,66 @@ class PaymentApi extends ResourceController
         $request = \Config\Services::request();
 
         try {
+            // Get raw input for logging
+            $rawInput = file_get_contents('php://input');
+            log_message('info', 'Payraizen Webhook Raw Input: ' . $rawInput);
+
             // Get the JSON payload from the request
             $payload = $request->getJSON(true);
 
-            log_message('info', 'Payraizen Webhook Received: ' . json_encode($payload));
-
-            // Validate payload structure
-            if (!isset($payload['order_details'])) {
-                log_message('error', 'Payraizen Webhook Error: Missing order_details');
-                return $this->fail('Invalid payload: Missing order_details');
+            // Also try to get from POST if JSON is empty
+            if (empty($payload)) {
+                $payload = $request->getPost();
+                log_message('info', 'Payraizen Webhook using POST data instead of JSON');
             }
 
-            $orderDetails = $payload['order_details'];
+            log_message('info', 'Payraizen Webhook Received ' . json_encode([
+                'payload' => $payload,
+                'request' => $request->getPost()
+            ]));
+
+            // Handle nested payload structure (sometimes Payraizen sends nested data)
+            $orderDetails = null;
+
+            // Check if order_details exists directly
+            if (isset($payload['order_details'])) {
+                $orderDetails = $payload['order_details'];
+            }
+            // Check if the entire payload IS the order_details
+            elseif (isset($payload['tid']) && isset($payload['bank_utr'])) {
+                $orderDetails = $payload;
+            }
+            // Check if payload is wrapped in another layer
+            elseif (isset($payload['payload']['order_details'])) {
+                $orderDetails = $payload['payload']['order_details'];
+            }
+
+            // Validate we found order details
+            if (!$orderDetails) {
+                log_message('error', 'Payraizen Webhook Error: Missing order_details. Payload: ' . json_encode($payload));
+                // Still respond with success to prevent retries
+                return $this->respond([
+                    'status' => 'error',
+                    'message' => 'Invalid payload: Missing order_details'
+                ]);
+            }
+
             $status = $orderDetails['status'] ?? null;
 
             // Validate required fields
-            if (!isset($orderDetails['tid']) || !isset($orderDetails['bank_utr'])) {
-                log_message('error', 'Payraizen Webhook Error: Missing tid or bank_utr');
-                return $this->fail('Invalid payload: Missing required fields');
+            if (!isset($orderDetails['tid'])) {
+                log_message('error', 'Payraizen Webhook Error: Missing tid. Order Details: ' . json_encode($orderDetails));
+                return $this->respond([
+                    'status' => 'error',
+                    'message' => 'Invalid payload: Missing tid'
+                ]);
             }
 
             $gatewayOrderId = $orderDetails['tid'];
-            $bankUtr = $orderDetails['bank_utr'];
+            $bankUtr = $orderDetails['bank_utr'] ?? 'N/A';
+            $amount = $orderDetails['amount'] ?? 0;
+
+            log_message('info', 'Payraizen Webhook Processing: TID=' . $gatewayOrderId . ', Status=' . $status . ', UTR=' . $bankUtr);
 
             // Find payment by gateway order ID
             $paymentModel = new \App\Models\PaymentModel();
@@ -568,7 +606,29 @@ class PaymentApi extends ResourceController
 
             if (!$payment) {
                 log_message('error', 'Payraizen Webhook Error: Payment not found for gateway order ID: ' . $gatewayOrderId);
-                return $this->failNotFound('Payment not found');
+
+                // Try to find by amount and recent timestamp (within last 30 minutes)
+                $recentTime = date('Y-m-d H:i:s', strtotime('-30 minutes'));
+                $payment = $paymentModel
+                    ->where('amount', $amount)
+                    ->where('gateway_name', 'payraizen')
+                    ->where('created_at >=', $recentTime)
+                    ->where('status', 'pending')
+                    ->orderBy('created_at', 'DESC')
+                    ->first();
+
+                if ($payment) {
+                    log_message('info', 'Payraizen Webhook: Found payment by amount matching - TXN: ' . $payment['txn_id']);
+                    // Update the gateway_order_id for future reference
+                    $paymentModel->update($payment['id'], ['gateway_order_id' => $gatewayOrderId]);
+                } else {
+                    log_message('error', 'Payraizen Webhook: No matching payment found by amount either');
+                    // Still respond with success to prevent webhook retries
+                    return $this->respond([
+                        'status' => 'accepted',
+                        'message' => 'Payment not found but webhook acknowledged'
+                    ]);
+                }
             }
 
             // Update payment status based on webhook
@@ -582,15 +642,19 @@ class PaymentApi extends ResourceController
                 $updateData['utr'] = $bankUtr;
                 $updateData['completed_time'] = date('Y-m-d H:i:s');
                 $updateData['verify_source'] = 'payraizen_webhook';
-            } else {
+            } elseif ($status === 'failed' || $status === 'failure') {
                 $updateData['status'] = 'failed';
+            } else {
+                // Unknown status, log it but don't update
+                log_message('warning', 'Payraizen Webhook: Unknown status received: ' . $status);
             }
 
             try {
                 $paymentModel->update($payment['id'], $updateData);
 
-                log_message('info', 'Payraizen Webhook: Payment updated successfully - TXN: ' . $payment['txn_id'] . ', Status: ' . ($updateData['status'] ?? 'unknown'));
+                log_message('info', 'Payraizen Webhook: Payment updated successfully - TXN: ' . $payment['txn_id'] . ', Status: ' . ($updateData['status'] ?? 'unknown') . ', UTR: ' . $bankUtr);
 
+                // Respond quickly to prevent timeout
                 return $this->respond([
                     'status' => 'success',
                     'message' => 'Payment status updated successfully',
@@ -598,17 +662,74 @@ class PaymentApi extends ResourceController
                 ]);
             } catch (\Exception $e) {
                 log_message('error', 'Payraizen Webhook Error: Database update failed - ' . $e->getMessage());
-                return $this->failServerError('Database error: ' . $e->getMessage());
+                // Still respond with success to prevent retries
+                return $this->respond([
+                    'status' => 'error',
+                    'message' => 'Database error but webhook acknowledged',
+                    'error' => $e->getMessage()
+                ]);
             }
 
         } catch (\Exception $e) {
-            log_message('error', 'Payraizen Webhook Error: ' . $e->getMessage());
+            log_message('error', 'Payraizen Webhook Error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            // Always respond quickly to prevent timeout
             return $this->respond([
                 'status' => 'error',
-                'message' => 'Failed to process Payraizen webhook',
+                'message' => 'Webhook acknowledged with error',
                 'error' => $e->getMessage()
-            ], 500);
+            ]);
         }
+    }
+
+    /**
+     * Test Payraizen Webhook
+     * Debugging endpoint to test webhook functionality
+     */
+    public function testPayraizenWebhook()
+    {
+        $paymentModel = new \App\Models\PaymentModel();
+
+        // Get recent Payraizen payments
+        $recentPayments = $paymentModel
+            ->where('gateway_name', 'payraizen')
+            ->orderBy('created_at', 'DESC')
+            ->limit(5)
+            ->find();
+
+        $output = [
+            'status' => 'test',
+            'message' => 'Payraizen Webhook Test Endpoint',
+            'webhook_url' => base_url('api/payment/payraizen/webhook'),
+            'recent_payments' => $recentPayments,
+            'test_payload' => [
+                'status' => 'true',
+                'msg' => 'Payin Webhook',
+                'order_details' => [
+                    'amount' => 516,
+                    'bank_utr' => 'TEST_UTR_' . time(),
+                    'status' => 'success',
+                    'tid' => $recentPayments[0]['gateway_order_id'] ?? 'NO_RECENT_PAYMENT',
+                    'mid' => 'lysCjB0iJe',
+                    'payee_vpa' => 'UPI'
+                ]
+            ],
+            'curl_command' => "curl -X POST " . base_url('api/payment/payraizen/webhook') . " \\\n" .
+                "  -H 'Content-Type: application/json' \\\n" .
+                "  -d '" . json_encode([
+                    'status' => 'true',
+                    'msg' => 'Payin Webhook',
+                    'order_details' => [
+                        'amount' => 516,
+                        'bank_utr' => 'TEST_UTR_' . time(),
+                        'status' => 'success',
+                        'tid' => $recentPayments[0]['gateway_order_id'] ?? 'NO_RECENT_PAYMENT',
+                        'mid' => 'lysCjB0iJe',
+                        'payee_vpa' => 'UPI'
+                    ]
+                ]) . "'"
+        ];
+
+        return $this->respond($output);
     }
 
     /**
