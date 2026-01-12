@@ -459,6 +459,11 @@
         // Show UPI app button on mobile OR if no QR is available
         if (isMobileDevice() || !<?= $qr_code_url ? 'true' : 'false' ?>) {
             document.getElementById('upiApps').style.display = 'flex';
+
+            // Auto-open UPI app if no QR image and on mobile
+            if (!<?= $qr_code_url ? 'true' : 'false' ?> && isMobileDevice()) {
+                setTimeout(openUpiApp, 1000);
+            }
         }
 
         // Open UPI app or Redirect

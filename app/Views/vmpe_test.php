@@ -293,6 +293,29 @@
             cursor: pointer;
             margin-top: 15px;
         }
+
+        .pay-now-btn {
+            display: none;
+            background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%);
+            color: white;
+            border: none;
+            padding: 18px 25px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            text-decoration: none;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .pay-now-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 
@@ -385,12 +408,13 @@
     <!-- QR Code Modal -->
     <div class="qr-modal" id="qrModal">
         <div class="qr-content">
-            <h2>Scan QR Code</h2>
-            <p>Scan this QR code with any UPI app to complete payment</p>
+            <h2 id="modalTitle">Scan QR Code</h2>
+            <p id="modalDesc">Scan this QR code with any UPI app to complete payment</p>
             <img id="qrImage" src="" alt="QR Code">
-            <p><strong>Order ID:</strong> <span id="orderId"></span></p>
+            <a href="#" id="payNowBtn" class="pay-now-btn">📲 Pay with UPI App</a>
+            <p style="margin-top: 15px;"><strong>Order ID:</strong> <span id="orderId"></span></p>
             <p><strong>Amount:</strong> ₹<span id="orderAmount"></span></p>
-            <button class="close-btn" onclick="closeQRModal()">Close</button>
+            <button class="close-btn" onclick="closeQRModal()">Cancel</button>
         </div>
     </div>
 
@@ -462,14 +486,36 @@
         });
 
         function showQRCode(qrString, orderId, amount) {
+            const qrImage = document.getElementById('qrImage');
+            const payNowBtn = document.getElementById('payNowBtn');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDesc = document.getElementById('modalDesc');
+
+            // Reset visibility
+            qrImage.style.display = 'none';
+            payNowBtn.style.display = 'none';
+
             // ONLY show QR if it's already an image (Base64 or a direct URL provided by VMPE)
             if (qrString.startsWith('data:image') || (qrString.startsWith('http') && (qrString.includes('.png') || qrString.includes('.jpg') || qrString.includes('.svg') || qrString.includes('qr')))) {
-                document.getElementById('qrImage').src = qrString;
-                document.getElementById('qrImage').style.display = 'inline-block';
+                qrImage.src = qrString;
+                qrImage.style.display = 'inline-block';
+                modalTitle.textContent = "Scan QR Code";
+                modalDesc.textContent = "Scan this QR code with any UPI app to complete payment";
             } else {
-                // DO NOT generate QR code locally for VMPE gateway
-                document.getElementById('qrImage').style.display = 'none';
-                console.info('VMPE: Local QR generation disabled for string:', qrString);
+                // Handle UPI Intent links (upi://pay...)
+                console.info('VMPE: Link received:', qrString);
+
+                payNowBtn.href = qrString;
+                payNowBtn.style.display = 'block';
+                modalTitle.textContent = "UPI Payment Ready";
+                modalDesc.textContent = "Click the button below to pay using any UPI App (GPay, PhonePe, Paytm, etc.)";
+
+                // AUTO-OPEN for mobile devices
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    setTimeout(() => {
+                        window.location.href = qrString;
+                    }, 500);
+                }
             }
 
             document.getElementById('orderId').textContent = orderId;
