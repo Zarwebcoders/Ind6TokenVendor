@@ -18,6 +18,7 @@ class App extends BaseConfig
      */
     public string $baseURL = 'https://ind6vendorfinal.zarwebcoders.in/';
 
+
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
      * If you want to accept multiple Hostnames, set this.

@@ -67,7 +67,7 @@ class PaytmGatewayApi extends ResourceController
         }
 
         // Format amount properly (2 decimal places)
-        $fmtAmount = number_format((float)$amount, 2, '.', '');
+        $fmtAmount = number_format((float) $amount, 2, '.', '');
 
         // Create payment note
         $note = "Payment for Order {$orderId}";
@@ -274,15 +274,23 @@ class PaytmGatewayApi extends ResourceController
     public function callback()
     {
         $request = \Config\Services::request();
-        $paytmResponse = $request->getPost();
 
-        log_message('info', 'Paytm Callback: ' . json_encode($paytmResponse));
+        // Paytm can send data via POST or GET
+        $paytmResponse = $request->getPost() ?: $request->getGet();
+
+        log_message('info', 'Paytm Callback Received: ' . json_encode($paytmResponse));
 
         $orderId = $paytmResponse['ORDERID'] ?? null;
         $checksumHash = $paytmResponse['CHECKSUMHASH'] ?? null;
+        $status = $paytmResponse['STATUS'] ?? 'PENDING';
+        $txnId = $paytmResponse['TXNID'] ?? null;
+        $bankTxnId = $paytmResponse['BANKTXNID'] ?? null;
+        $respMsg = $paytmResponse['RESPMSG'] ?? '';
+        $txnAmount = $paytmResponse['TXNAMOUNT'] ?? null;
 
         if (!$orderId) {
-            return $this->fail('Invalid callback');
+            log_message('error', 'Paytm Callback: No ORDER_ID received');
+            return redirect()->to(base_url('payment/failure'))->with('error', 'Invalid callback - No order ID');
         }
 
         // Verify checksum
@@ -291,45 +299,77 @@ class PaytmGatewayApi extends ResourceController
 
         if (!$isValidChecksum) {
             log_message('error', 'Paytm: Invalid checksum for order ' . $orderId);
-            return $this->fail('Invalid checksum');
+            log_message('error', 'Expected checksum verification failed. Response: ' . json_encode($paytmResponse));
+            return redirect()->to(base_url('payment/failure?order_id=' . $orderId))
+                ->with('error', 'Payment verification failed - Invalid checksum');
         }
+
+        log_message('info', 'Paytm: Checksum verified successfully for order ' . $orderId);
 
         $paymentModel = new \App\Models\PaymentModel();
         $payment = $paymentModel->where('txn_id', $orderId)->first();
 
         if (!$payment) {
-            return $this->failNotFound('Payment not found');
+            log_message('error', 'Paytm Callback: Payment not found for order ' . $orderId);
+            return redirect()->to(base_url('payment/failure'))
+                ->with('error', 'Payment record not found');
         }
 
-        $status = $paytmResponse['STATUS'] ?? 'PENDING';
-        $txnId = $paytmResponse['TXNID'] ?? null;
-        $bankTxnId = $paytmResponse['BANKTXNID'] ?? null;
+        log_message('info', 'Paytm Callback: Payment found. Current status: ' . $payment['status'] . ', Paytm status: ' . $status);
 
         // Update payment based on response
         if ($status === 'TXN_SUCCESS') {
-            $paymentModel->update($payment['id'], [
+            $updateData = [
                 'status' => 'success',
                 'utr' => $bankTxnId ?? $txnId,
                 'gateway_order_id' => $txnId,
+                'gateway_txn_id' => $bankTxnId,
                 'completed_time' => date('Y-m-d H:i:s'),
                 'verify_source' => 'paytm_callback',
-                'gateway_response' => json_encode($paytmResponse)
-            ]);
+                'gateway_response' => json_encode($paytmResponse),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $paymentModel->update($payment['id'], $updateData);
+
+            log_message('info', 'Paytm: Payment marked as SUCCESS for order ' . $orderId . ' with UTR: ' . ($bankTxnId ?? $txnId));
 
             // Redirect to success page
-            return redirect()->to(base_url('payment/success?order_id=' . $orderId));
+            return redirect()->to(base_url('payment/paytm/success?order_id=' . $orderId))
+                ->with('success', 'Payment completed successfully!');
+
         } elseif ($status === 'TXN_FAILURE') {
-            $paymentModel->update($payment['id'], [
+            $updateData = [
                 'status' => 'failed',
-                'gateway_response' => json_encode($paytmResponse)
-            ]);
+                'failure_reason' => $respMsg,
+                'gateway_response' => json_encode($paytmResponse),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $paymentModel->update($payment['id'], $updateData);
+
+            log_message('error', 'Paytm: Payment FAILED for order ' . $orderId . '. Reason: ' . $respMsg);
 
             // Redirect to failure page
-            return redirect()->to(base_url('payment/failed?order_id=' . $orderId));
-        }
+            return redirect()->to(base_url('payment/failure?order_id=' . $orderId))
+                ->with('error', 'Payment failed: ' . $respMsg);
 
-        // Pending
-        return redirect()->to(base_url('payment/pending?order_id=' . $orderId));
+        } else {
+            // Pending or other status
+            $updateData = [
+                'status' => 'pending',
+                'gateway_response' => json_encode($paytmResponse),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $paymentModel->update($payment['id'], $updateData);
+
+            log_message('info', 'Paytm: Payment PENDING for order ' . $orderId . '. Status: ' . $status);
+
+            // Redirect to pending/checkout page
+            return redirect()->to(base_url('payment/checkout?txn_id=' . $orderId))
+                ->with('info', 'Payment is being processed...');
+        }
     }
 
     /**
@@ -382,7 +422,7 @@ class PaytmGatewayApi extends ResourceController
             }
         }
         $paramStr = rtrim($paramStr, '&');
-        
+
         return hash_hmac('sha256', $paramStr, $key);
     }
 

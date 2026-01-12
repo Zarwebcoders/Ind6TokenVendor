@@ -64,6 +64,10 @@ $routes->post('api/paytm/check-status', 'PaytmGatewayApi::checkStatus');
 $routes->post('api/paytm/callback', 'PaytmGatewayApi::callback');
 $routes->get('api/paytm/callback', 'PaytmGatewayApi::callback');
 
+// VMPE Gateway Routes (KdsTechs Integration)
+$routes->post('api/vmpe/initiate', 'VmpeGatewayApi::initiatePayment');
+$routes->post('api/vmpe/webhook', 'VmpeGatewayApi::handleWebhook');
+$routes->post('api/vmpe/check-status', 'VmpeGatewayApi::checkStatus');
 
 // BharatPe Gateway Routes (Automatic Verification)
 $routes->post('api/bharatpe/create', 'BharatPeApi::createPayment');
@@ -75,6 +79,7 @@ $routes->get('api/bharatpe/callback', 'BharatPeApi::callback');
 $routes->get('payment/checkout', 'PaymentCheckout::index');
 $routes->post('payment/check-status', 'PaymentCheckout::checkStatus');
 $routes->get('payment/success', 'PaymentCheckout::success');
+$routes->get('payment/paytm/success', 'PaymentCheckout::paytmSuccess'); // Paytm specific success handler
 $routes->get('payment/failure', 'PaymentCheckout::failure');
 $routes->get('payment/pending', 'PaymentCheckout::pending');
 
@@ -85,7 +90,14 @@ $routes->post('webhook/payment', 'PaymentWebhook::handleWebhook');
 $routes->post('payment/simulate/success', 'PaymentWebhook::simulateSuccess');
 $routes->post('payment/simulate/failure', 'PaymentWebhook::simulateFailure');
 $routes->get('payment/test', 'PaymentTest::index');
+$routes->get('payment/paytm/test', function () {
+    return view('paytm_test');
+});
+$routes->get('payment/vmpe/test', function () {
+    return view('vmpe_test');
+});
 $routes->post('api/payment/test/create', 'PaymentTest::createTestPayment');
+
 
 
 

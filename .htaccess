@@ -24,6 +24,7 @@ Options -Indexes
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ public/index.php/$1 [L]
+
     
     # Ensure Authorization header is passed along
     RewriteCond %{HTTP:Authorization} .

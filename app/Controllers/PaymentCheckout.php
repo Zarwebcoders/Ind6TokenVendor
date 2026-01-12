@@ -23,9 +23,9 @@ class PaymentCheckout extends Controller
     public function index()
     {
         $transactionId = $this->request->getGet('txn_id');
-        
+
         log_message('info', 'Checkout page accessed with txn_id: ' . ($transactionId ?? 'NULL'));
-        
+
         if (!$transactionId) {
             log_message('error', 'No transaction ID provided');
             return redirect()->to('/payment/test')->with('error', 'Invalid payment request - No transaction ID');
@@ -33,9 +33,9 @@ class PaymentCheckout extends Controller
 
         // Get payment details
         $payment = $this->paymentModel->where('platform_txn_id', $transactionId)->first();
-        
+
         log_message('info', 'Payment lookup result: ' . ($payment ? 'Found' : 'Not found'));
-        
+
         if (!$payment) {
             log_message('error', 'Payment not found for txn_id: ' . $transactionId);
             return redirect()->to('/payment/test')->with('error', 'Payment not found: ' . $transactionId);
@@ -52,9 +52,9 @@ class PaymentCheckout extends Controller
 
         // Get vendor details
         $vendor = $this->vendorModel->find($payment['vendor_id']);
-        
+
         log_message('info', 'Vendor lookup for ID ' . $payment['vendor_id'] . ': ' . ($vendor ? 'Found' : 'Not found'));
-        
+
         if (!$vendor) {
             log_message('error', 'Vendor not found for ID: ' . $payment['vendor_id']);
             return redirect()->to('/payment/test')->with('error', 'Vendor not found');
@@ -64,11 +64,11 @@ class PaymentCheckout extends Controller
         $upiId = $vendor['upi_id'] ?? 'abuzarmunshi12-2@okaxis';
         $amount = $payment['amount'];
         $orderRef = $payment['platform_txn_id'];
-        
+
         // Create UPI payment string
-        $upiString = "upi://pay?pa={$upiId}&pn=" . urlencode($vendor['business_name'] ?? 'Merchant') . 
-                     "&am={$amount}&cu=INR&tn=" . urlencode("Payment for Order {$orderRef}") . 
-                     "&tr={$orderRef}";
+        $upiString = "upi://pay?pa={$upiId}&pn=" . urlencode($vendor['business_name'] ?? 'Merchant') .
+            "&am={$amount}&cu=INR&tn=" . urlencode("Payment for Order {$orderRef}") .
+            "&tr={$orderRef}";
 
         // Generate QR code URL (using QR Server API - free alternative)
         $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($upiString);
@@ -97,7 +97,7 @@ class PaymentCheckout extends Controller
     public function checkStatus()
     {
         $transactionId = $this->request->getPost('transaction_id');
-        
+
         if (!$transactionId) {
             return $this->response->setJSON([
                 'status' => 'error',
@@ -107,7 +107,7 @@ class PaymentCheckout extends Controller
 
         // Get payment from database
         $payment = $this->paymentModel->where('platform_txn_id', $transactionId)->first();
-        
+
         if (!$payment) {
             return $this->response->setJSON([
                 'status' => 'error',
@@ -143,14 +143,16 @@ class PaymentCheckout extends Controller
      */
     public function success()
     {
-        $transactionId = $this->request->getGet('txn');
-        
+        $transactionId = $this->request->getGet('txn') ?? $this->request->getGet('order_id');
+
         if (!$transactionId) {
             return redirect()->to('/');
         }
 
-        $payment = $this->paymentModel->where('platform_txn_id', $transactionId)->first();
-        
+        $payment = $this->paymentModel->where('platform_txn_id', $transactionId)
+            ->orWhere('txn_id', $transactionId)
+            ->first();
+
         if (!$payment) {
             return redirect()->to('/')->with('error', 'Payment not found');
         }
@@ -158,12 +160,63 @@ class PaymentCheckout extends Controller
         $data = [
             'transaction_id' => $transactionId,
             'amount' => number_format($payment['amount'], 2),
-            'utr' => $payment['gateway_txn_id'] ?? 'N/A',
+            'utr' => $payment['gateway_txn_id'] ?? $payment['utr'] ?? 'N/A',
             'date' => date('d M, Y h:i A', strtotime($payment['updated_at'])),
-            'status' => 'Success'
+            'status' => 'Success',
+            'gateway' => $payment['gateway_name'] ?? 'Payment Gateway',
+            'payment_method' => $payment['method'] ?? 'N/A'
         ];
 
         return view('payment_success', $data);
+    }
+
+    /**
+     * Handle Paytm Success Response
+     * This is called after Paytm redirects back with success
+     */
+    public function paytmSuccess()
+    {
+        $orderId = $this->request->getGet('order_id') ?? $this->request->getGet('ORDERID');
+
+        log_message('info', 'Paytm Success Page accessed with order_id: ' . ($orderId ?? 'NULL'));
+
+        if (!$orderId) {
+            log_message('error', 'No order ID provided in Paytm success callback');
+            return redirect()->to('/payment/test')->with('error', 'Invalid payment response - No order ID');
+        }
+
+        // Get payment details
+        $payment = $this->paymentModel->where('txn_id', $orderId)->first();
+
+        log_message('info', 'Payment lookup result for Paytm: ' . ($payment ? 'Found' : 'Not found'));
+
+        if (!$payment) {
+            log_message('error', 'Payment not found for order_id: ' . $orderId);
+            return redirect()->to('/payment/test')->with('error', 'Payment not found: ' . $orderId);
+        }
+
+        // Check if payment is successful
+        if ($payment['status'] === 'success') {
+            $data = [
+                'transaction_id' => $orderId,
+                'amount' => number_format($payment['amount'], 2),
+                'utr' => $payment['utr'] ?? $payment['gateway_order_id'] ?? 'N/A',
+                'bank_txn_id' => $payment['gateway_txn_id'] ?? 'N/A',
+                'date' => date('d M, Y h:i A', strtotime($payment['updated_at'] ?? $payment['created_at'])),
+                'status' => 'Success',
+                'gateway' => 'Paytm',
+                'payment_method' => $payment['method'] ?? 'paytm_gateway'
+            ];
+
+            return view('payment_success', $data);
+        } elseif ($payment['status'] === 'pending') {
+            // Payment is still pending, show processing page
+            return redirect()->to('/payment/checkout?txn_id=' . $orderId)
+                ->with('info', 'Payment is being processed. Please wait...');
+        } else {
+            // Payment failed
+            return redirect()->to('/payment/failure?txn=' . $orderId);
+        }
     }
 
     /**
@@ -172,13 +225,13 @@ class PaymentCheckout extends Controller
     public function failure()
     {
         $transactionId = $this->request->getGet('txn');
-        
+
         if (!$transactionId) {
             return redirect()->to('/');
         }
 
         $payment = $this->paymentModel->where('platform_txn_id', $transactionId)->first();
-        
+
         if (!$payment) {
             return redirect()->to('/')->with('error', 'Payment not found');
         }
