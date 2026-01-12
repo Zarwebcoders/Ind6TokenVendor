@@ -462,12 +462,14 @@
         });
 
         function showQRCode(qrString, orderId, amount) {
-            // If qrString is a base64 image
-            if (qrString.startsWith('data:image')) {
+            // ONLY show QR if it's already an image (Base64 or a direct URL provided by VMPE)
+            if (qrString.startsWith('data:image') || (qrString.startsWith('http') && (qrString.includes('.png') || qrString.includes('.jpg') || qrString.includes('.svg') || qrString.includes('qr')))) {
                 document.getElementById('qrImage').src = qrString;
+                document.getElementById('qrImage').style.display = 'inline-block';
             } else {
-                // Generate QR code from string
-                document.getElementById('qrImage').src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrString);
+                // DO NOT generate QR code locally for VMPE gateway
+                document.getElementById('qrImage').style.display = 'none';
+                console.info('VMPE: Local QR generation disabled for string:', qrString);
             }
 
             document.getElementById('orderId').textContent = orderId;

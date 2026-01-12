@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -214,7 +215,8 @@
         }
 
         /* Success Screen */
-        .success-screen, .fail-screen {
+        .success-screen,
+        .fail-screen {
             display: none;
             position: fixed;
             top: 0;
@@ -250,13 +252,15 @@
             color: #f44336;
         }
 
-        .success-message, .fail-message {
+        .success-message,
+        .fail-message {
             font-size: 32px;
             font-weight: bold;
             margin-bottom: 15px;
         }
 
-        .success-subtext, .fail-subtext {
+        .success-subtext,
+        .fail-subtext {
             font-size: 18px;
             opacity: 0.9;
             margin-bottom: 30px;
@@ -271,9 +275,11 @@
             0% {
                 transform: scale(0);
             }
+
             50% {
                 transform: scale(1.1);
             }
+
             100% {
                 transform: scale(1);
             }
@@ -309,6 +315,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Main Checkout Container -->
     <div class="container qr-wrapper">
@@ -316,35 +323,55 @@
             <div class="header">
                 <h1><i class="fas fa-shopping-cart"></i> Complete Payment</h1>
             </div>
-            
+
             <div class="amount-display">
                 <span class="currency">₹</span>
                 <span class="amount"><?= $amount ?></span>
             </div>
-            
+
             <!-- QR Code Section -->
-            <div class="qr-container">
-                <h3 style="margin-bottom: 15px; color: #555;">Scan QR Code to Pay</h3>
-                <div class="qr-code">
-                    <img src="<?= $qr_code_url ?>" alt="Scan this QR code to pay">
+            <?php if ($qr_code_url): ?>
+                <div class="qr-container">
+                    <h3 style="margin-bottom: 15px; color: #555;">Scan QR Code to Pay</h3>
+                    <div class="qr-code">
+                        <img src="<?= $qr_code_url ?>" alt="Scan this QR code to pay">
+                    </div>
                 </div>
-            </div>
-            
+            <?php else: ?>
+                <div class="qr-container" style="padding: 40px 20px;">
+                    <?php if ($gateway_name === 'vmpe'): ?>
+                        <h3 style="margin-bottom: 15px; color: #555;">Link Ready</h3>
+                        <p style="color: #666; margin-bottom: 20px;">Please use the "Pay with UPI App" button below to complete
+                            your payment.</p>
+                        <div style="font-size: 50px; color: #667eea; margin-bottom: 20px;">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                    <?php else: ?>
+                        <h3 style="margin-bottom: 15px; color: #d32f2f;">No QR Available</h3>
+                        <p style="color: #666;">There was an issue generating the QR code. Please try again or use the link
+                            below.</p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
             <!-- Timer -->
             <div class="timer-container">
                 <div class="timer">
-                    <i class="fas fa-clock"></i> Time remaining: 
+                    <i class="fas fa-clock"></i> Time remaining:
                     <span class="time-remaining" id="timer">5:00</span>
                 </div>
             </div>
-            
+
             <!-- UPI Apps (Mobile Only) -->
-            <div class="upi-apps" id="upiApps" style="display: none;">
-                <div class="upi-app" onclick="openUpiApp()">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/200px-UPI-Logo-vector.svg.png" alt="Pay with UPI">
+            <div class="upi-apps" id="upiApps" style="<?= $qr_code_url ? 'display: none;' : 'display: flex;' ?>">
+                <div class="upi-app" onclick="openUpiApp()"
+                    style="width: 100%; text-align: center; padding: 15px; background: #4caf50; color: white; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/200px-UPI-Logo-vector.svg.png"
+                        alt="UPI" style="height: 25px; filter: brightness(0) invert(1);">
+                    <span style="font-weight: bold; font-size: 16px;">PAY WITH UPI APP</span>
                 </div>
             </div>
-            
+
             <!-- Payment Instructions -->
             <div class="payment-instructions">
                 <div class="instruction">
@@ -364,14 +391,14 @@
                     <div class="instruction-text">Confirm amount & pay</div>
                 </div>
             </div>
-            
+
             <!-- Status Message -->
             <div class="status-container">
                 <div class="status-message">
                     <i class="fas fa-spinner fa-pulse"></i> <span id="statusText">Verifying payment...</span>
                 </div>
             </div>
-            
+
             <!-- Order Details -->
             <div class="order-details">
                 <h3 style="margin-bottom: 15px; color: #333;"><i class="fas fa-receipt"></i> Order Details</h3>
@@ -394,7 +421,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Success Screen -->
     <div class="success-screen" id="successScreen">
         <div class="checkmark-wrapper">
@@ -404,7 +431,7 @@
         <div class="success-subtext">Thank you for your payment</div>
         <div class="countdown">Redirecting in <span id="successCountdown">3</span> seconds...</div>
     </div>
-    
+
     <!-- Failure Screen -->
     <div class="fail-screen" id="failureScreen">
         <div class="checkmark-wrapper">
@@ -423,43 +450,50 @@
         const successUrl = '<?= base_url('payment/success?txn=') ?>' + transactionId;
         const failureUrl = '<?= base_url('payment/failure?txn=') ?>' + transactionId;
         const upiString = '<?= $upi_string ?>';
-        
+
         // Detect mobile device
         function isMobileDevice() {
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
-        
-        // Show UPI app button on mobile
-        if (isMobileDevice()) {
+
+        // Show UPI app button on mobile OR if no QR is available
+        if (isMobileDevice() || !<?= $qr_code_url ? 'true' : 'false' ?>) {
             document.getElementById('upiApps').style.display = 'flex';
         }
-        
-        // Open UPI app
+
+        // Open UPI app or Redirect
         function openUpiApp() {
-            window.location.href = upiString;
+            if (upiString && (upiString.startsWith('http') || upiString.startsWith('paytmmp') || upiString.startsWith('upi'))) {
+                window.location.href = upiString;
+            } else if (upiString) {
+                // Fallback for any other custom protocol
+                window.location.href = upiString;
+            } else {
+                alert('Payment link not available. Please refresh or contact support.');
+            }
         }
-        
+
         // Timer countdown (5 minutes)
         let timeLeft = 5 * 60; // 5 minutes in seconds
         const timerDisplay = document.getElementById('timer');
-        
-        const timerInterval = setInterval(function() {
+
+        const timerInterval = setInterval(function () {
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
-            
-            timerDisplay.textContent = 
-                (minutes < 10 ? '0' : '') + minutes + ':' + 
+
+            timerDisplay.textContent =
+                (minutes < 10 ? '0' : '') + minutes + ':' +
                 (seconds < 10 ? '0' : '') + seconds;
-            
+
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 clearInterval(statusCheckInterval);
                 showAlert('error', failureUrl, 'Payment timeout! Please try again.');
             }
-            
+
             timeLeft--;
         }, 1000);
-        
+
         // Check payment status
         function checkPaymentStatus() {
             $.ajax({
@@ -467,9 +501,9 @@
                 url: checkStatusUrl,
                 data: { transaction_id: transactionId },
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     console.log('Status check:', response);
-                    
+
                     if (response.status === 'success') {
                         clearInterval(timerInterval);
                         clearInterval(statusCheckInterval);
@@ -483,27 +517,27 @@
                         document.getElementById('statusText').textContent = response.message || 'Waiting for payment...';
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.error('Status check error:', error);
                     // Continue checking even on error
                 }
             });
         }
-        
+
         // Start checking payment status every 3 seconds
         const statusCheckInterval = setInterval(checkPaymentStatus, 3000);
-        
+
         // Initial check after 2 seconds
         setTimeout(checkPaymentStatus, 2000);
-        
+
         // Show success/failure alert
         function showAlert(type, redirectUrl, message = '') {
             $('.qr-wrapper').hide();
-            
+
             if (type === 'success') {
                 const screen = document.getElementById('successScreen');
                 screen.style.display = 'flex';
-                
+
                 // Add celebration effects
                 for (let i = 0; i < 20; i++) {
                     const gift = document.createElement('div');
@@ -515,7 +549,7 @@
                     screen.appendChild(gift);
                     setTimeout(() => screen.removeChild(gift), 5000);
                 }
-                
+
                 startCountdown('successCountdown', redirectUrl);
             } else {
                 document.getElementById('failureScreen').style.display = 'flex';
@@ -525,16 +559,16 @@
                 startCountdown('failCountdown', redirectUrl);
             }
         }
-        
+
         // Countdown before redirect
         function startCountdown(elementId, redirectUrl) {
             let countdown = 3;
             const element = document.getElementById(elementId);
-            
-            const interval = setInterval(function() {
+
+            const interval = setInterval(function () {
                 countdown--;
                 element.textContent = countdown;
-                
+
                 if (countdown === 0) {
                     clearInterval(interval);
                     window.location.href = redirectUrl;
@@ -543,4 +577,5 @@
         }
     </script>
 </body>
+
 </html>

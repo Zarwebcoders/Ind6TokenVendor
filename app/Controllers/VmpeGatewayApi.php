@@ -112,12 +112,14 @@ class VmpeGatewayApi extends Controller
             $responseData = json_decode($response, true);
 
             if ($httpCode === 200 && isset($responseData['status']) && ($responseData['status'] === 'true' || $responseData['status'] === true)) {
-                // Save payment to database
-                $this->createPaymentRequest($orderId, $userId, $amount, 'vmpe');
+                $paymentUrl = $responseData['qr_code'] ?? $responseData['qr_url'] ?? $responseData['order_details']['deeplink'] ?? $responseData['qrString'] ?? $responseData['payment_url'] ?? '';
+
+                // Save payment to database with gateway info
+                $this->createPaymentRequest($orderId, $userId, $amount, 'vmpe', $paymentUrl, $responseData);
 
                 return $this->response->setJSON([
                     'success' => true,
-                    'payment_url' => $responseData['order_details']['deeplink'] ?? $responseData['qrString'] ?? $responseData['payment_url'] ?? '',
+                    'payment_url' => $paymentUrl,
                     'intent' => true,
                     'paymentId' => $orderId,
                     'order_id' => $orderId,
@@ -316,7 +318,7 @@ class VmpeGatewayApi extends Controller
     /**
      * Create payment request in database
      */
-    private function createPaymentRequest($orderId, $userId, $amount, $gateway)
+    private function createPaymentRequest($orderId, $userId, $amount, $gateway, $paymentUrl = null, $gatewayResponse = null)
     {
         try {
             if ($this->paymentModel === null) {
@@ -332,6 +334,7 @@ class VmpeGatewayApi extends Controller
                 'status' => 'pending',
                 'gateway_name' => $gateway,
                 'method' => 'upi',
+                'gateway_response' => is_array($gatewayResponse) ? json_encode($gatewayResponse) : $gatewayResponse,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];

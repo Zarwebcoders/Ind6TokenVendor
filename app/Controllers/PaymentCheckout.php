@@ -60,18 +60,35 @@ class PaymentCheckout extends Controller
             return redirect()->to('/payment/test')->with('error', 'Vendor not found');
         }
 
-        // Generate QR code data (UPI deep link)
+        // Default values
         $upiId = $vendor['upi_id'] ?? 'abuzarmunshi12-2@okaxis';
         $amount = $payment['amount'];
         $orderRef = $payment['platform_txn_id'];
-
-        // Create UPI payment string
         $upiString = "upi://pay?pa={$upiId}&pn=" . urlencode($vendor['business_name'] ?? 'Merchant') .
             "&am={$amount}&cu=INR&tn=" . urlencode("Payment for Order {$orderRef}") .
             "&tr={$orderRef}";
-
-        // Generate QR code URL (using QR Server API - free alternative)
         $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($upiString);
+
+        // Override if it's VMPE and we have dynamic data
+        if ($payment['gateway_name'] === 'vmpe') {
+            // Start by disabling local QR for VMPE
+            $qrCodeUrl = null;
+
+            if (!empty($payment['gateway_response'])) {
+                $resp = json_decode($payment['gateway_response'], true);
+                // Fields VMPE might return
+                $vmpeUrl = $resp['qr_code'] ?? $resp['qr_url'] ?? $resp['order_details']['qr_code'] ?? $resp['order_details']['deeplink'] ?? $resp['qrString'] ?? $resp['payment_url'] ?? null;
+
+                if ($vmpeUrl) {
+                    $upiString = $vmpeUrl;
+
+                    // ONLY use as QR if it's an actual image
+                    if (strpos($vmpeUrl, 'data:image') === 0 || (strpos($vmpeUrl, 'http') === 0 && (strpos($vmpeUrl, '.png') !== false || strpos($vmpeUrl, 'qr') !== false))) {
+                        $qrCodeUrl = $vmpeUrl;
+                    }
+                }
+            }
+        }
 
         // Prepare data for view
         $data = [
@@ -81,6 +98,7 @@ class PaymentCheckout extends Controller
             'upi_id' => $upiId,
             'upi_string' => $upiString,
             'qr_code_url' => $qrCodeUrl,
+            'gateway_name' => $payment['gateway_name'] ?? 'gateway',
             'merchant_name' => $vendor['business_name'] ?? 'Merchant',
             'created_at' => date('d M, Y h:i A', strtotime($payment['created_at'])),
             'buyer_name' => $payment['buyer_name'] ?? 'Customer',
