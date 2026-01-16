@@ -69,22 +69,25 @@ class PaymentCheckout extends Controller
             "&tr={$orderRef}";
         $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($upiString);
 
-        // Override if it's VMPE and we have dynamic data
-        if ($payment['gateway_name'] === 'vmpe') {
-            // Start by disabling local QR for VMPE
+        // Override if it's VMPE or Kay2Pay and we have dynamic data
+        if (in_array($payment['gateway_name'], ['vmpe', 'kay2pay'])) {
+            // Start by disabling local QR for these gateways
             $qrCodeUrl = null;
 
             if (!empty($payment['gateway_response'])) {
                 $resp = json_decode($payment['gateway_response'], true);
-                // Fields VMPE might return
-                $vmpeUrl = $resp['qr_code'] ?? $resp['qr_url'] ?? $resp['order_details']['qr_code'] ?? $resp['order_details']['deeplink'] ?? $resp['qrString'] ?? $resp['payment_url'] ?? null;
 
-                if ($vmpeUrl) {
-                    $upiString = $vmpeUrl;
+                // Extract URL from response (common fields for both gateways)
+                $gatewayUrl = $resp['payment_url'] ?? $resp['data']['payment_url'] ?? $resp['qr_code'] ?? $resp['qr_url'] ??
+                    $resp['order_details']['qr_code'] ?? $resp['order_details']['deeplink'] ??
+                    $resp['qrString'] ?? null;
+
+                if ($gatewayUrl) {
+                    $upiString = $gatewayUrl;
 
                     // ONLY use as QR if it's an actual image
-                    if (strpos($vmpeUrl, 'data:image') === 0 || (strpos($vmpeUrl, 'http') === 0 && (strpos($vmpeUrl, '.png') !== false || strpos($vmpeUrl, 'qr') !== false))) {
-                        $qrCodeUrl = $vmpeUrl;
+                    if (strpos($gatewayUrl, 'data:image') === 0 || (strpos($gatewayUrl, 'http') === 0 && (strpos($gatewayUrl, '.png') !== false || strpos($gatewayUrl, 'qr') !== false))) {
+                        $qrCodeUrl = $gatewayUrl;
                     }
                 }
             }

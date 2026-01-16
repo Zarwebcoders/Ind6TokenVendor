@@ -222,6 +222,7 @@
                 <select id="gateway" name="gateway" required>
                     <option value="payraizen">PayRaizen</option>
                     <option value="localpaisa">LocalPaisa</option>
+                    <option value="kay2pay">Kay2Pay</option>
                 </select>
             </div>
 
@@ -272,6 +273,8 @@
             let apiEndpoint;
             if (gateway === 'localpaisa') {
                 apiEndpoint = baseUrl + 'api/payment/localpaisa/initiate';
+            } else if (gateway === 'kay2pay') {
+                apiEndpoint = baseUrl + 'api/kay2pay/initiate';
             } else {
                 apiEndpoint = baseUrl + 'api/payment/test/create';
             }

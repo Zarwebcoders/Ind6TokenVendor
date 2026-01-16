@@ -69,6 +69,11 @@ $routes->post('api/vmpe/initiate', 'VmpeGatewayApi::initiatePayment');
 $routes->post('api/vmpe/webhook', 'VmpeGatewayApi::handleWebhook');
 $routes->post('api/vmpe/check-status', 'VmpeGatewayApi::checkStatus');
 
+// Kay2Pay Gateway Routes
+$routes->post('api/kay2pay/initiate', 'Kay2PayGatewayApi::initiatePayment');
+$routes->post('api/kay2pay/webhook', 'Kay2PayGatewayApi::handleWebhook');
+$routes->post('api/kay2pay/check-status', 'Kay2PayGatewayApi::checkStatus');
+
 // BharatPe Gateway Routes (Automatic Verification)
 $routes->post('api/bharatpe/create', 'BharatPeApi::createPayment');
 $routes->post('api/bharatpe/check-status', 'BharatPeApi::checkStatus');
@@ -95,6 +100,9 @@ $routes->get('payment/paytm/test', function () {
 });
 $routes->get('payment/vmpe/test', function () {
     return view('vmpe_test');
+});
+$routes->get('payment/kay2pay/test', function () {
+    return view('kay2pay_test');
 });
 $routes->post('api/payment/test/create', 'PaymentTest::createTestPayment');
 
