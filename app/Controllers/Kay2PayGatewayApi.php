@@ -107,6 +107,7 @@ class Kay2PayGatewayApi extends Controller
             // Get the payment URL (UPI Intent/QR)
             $paymentUrl = $responseData['payment_url'] ??
                 $responseData['data']['payment_url'] ??
+                $responseData['data']['intent_data'] ??
                 $responseData['data']['paymentUrl'] ??
                 $responseData['url'] ??
                 $responseData['data']['url'] ??
