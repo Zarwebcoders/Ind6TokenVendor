@@ -49,7 +49,7 @@ class Auth extends BaseController
         $inputPassword = trim($password);
         $storedPassword = trim($user['password']);
 
-        if ($inputPassword === $storedPassword) {
+        if (password_verify($inputPassword, $storedPassword) || $inputPassword === $storedPassword) {
             log_message('info', 'Password matched for user: ' . $user['email']);
 
             $sessionData = [
