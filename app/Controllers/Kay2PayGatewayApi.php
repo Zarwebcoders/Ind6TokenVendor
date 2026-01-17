@@ -179,10 +179,11 @@ class Kay2PayGatewayApi extends Controller
                 ]);
             }
 
-            $data = $payload['data'];
-            $status = $data['status'] ?? 'failed';
+            $data = $payload['data'] ?? $payload;
+            $status = $data['status'] ?? $payload['status'] ?? 'failed';
+            $normalizedStatus = strtoupper((string) $status);
 
-            if ($status !== 'success') {
+            if ($normalizedStatus !== 'SUCCESS' && $normalizedStatus !== 'COMPLETED') {
                 log_message('error', 'Kay2Pay Webhook: Status is not success - ' . $status);
                 return $this->response->setJSON([
                     'success' => false,
@@ -190,12 +191,12 @@ class Kay2PayGatewayApi extends Controller
                 ]);
             }
 
-            // udf1 contains our $orderId
-            $orderId = $data['udf1'] ?? null;
-            $utr = $data['utr_no'] ?? null;
+            // udf1 contains our $orderId, but check other fields just in case
+            $orderId = $data['udf1'] ?? $payload['udf1'] ?? $data['order_id'] ?? $payload['order_id'] ?? null;
+            $utr = $data['utr_no'] ?? $payload['utr_no'] ?? $data['utr'] ?? $payload['utr'] ?? null;
 
             if (!$orderId) {
-                log_message('error', 'Kay2Pay Webhook: No udf1 (order_id) in payload');
+                log_message('error', 'Kay2Pay Webhook: No order identifier (udf1) found in payload');
                 return $this->response->setJSON([
                     'success' => false,
                     'message' => 'Invalid payload - no order_id'
@@ -272,11 +273,14 @@ class Kay2PayGatewayApi extends Controller
             if ($httpCode === 200) {
                 $responseData = json_decode($response, true);
 
-                // Usually Kay2Pay query returns { status: true, data: { status: 'success', ... } }
+                // Usually Kay2Pay query returns { status: 'success', data: { status: 'SUCCESS', utr_no: '...' } }
                 $status = $responseData['data']['status'] ?? $responseData['status'] ?? $responseData['success'] ?? 'pending';
 
-                if ($status === 'success' || $status === 'completed' || $status === true || $status === 'true') {
-                    $utr = $responseData['data']['utr_no'] ?? $responseData['utr'] ?? null;
+                // Make status check case-insensitive
+                $normalizedStatus = strtoupper((string) $status);
+
+                if (in_array($normalizedStatus, ['SUCCESS', 'COMPLETED', 'TRUE', '1'])) {
+                    $utr = $responseData['data']['utr_no'] ?? $responseData['utr_no'] ?? $responseData['data']['utr'] ?? $responseData['utr'] ?? null;
 
                     $this->paymentModel->update($payment['id'], [
                         'status' => 'success',
@@ -292,7 +296,7 @@ class Kay2PayGatewayApi extends Controller
                         'utr' => $utr,
                         'amount' => $payment['amount']
                     ]);
-                } elseif ($status === 'failed' || $status === 'failure') {
+                } elseif (in_array($normalizedStatus, ['FAILED', 'FAILURE', 'DECLINED', 'REJECTED'])) {
                     $this->paymentModel->update($payment['id'], [
                         'status' => 'failed',
                         'updated_at' => date('Y-m-d H:i:s')
