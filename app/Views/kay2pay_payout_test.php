@@ -206,9 +206,14 @@
 
         <form id="payoutForm">
             <div class="form-grid">
-                <div class="form-group full-width">
+                <div class="form-group">
                     <label for="name">Beneficiary Name</label>
                     <input type="text" id="name" name="name" placeholder="Full name as per bank" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Beneficiary Email</label>
+                    <input type="email" id="email" name="email" placeholder="customer@example.com" required>
                 </div>
 
                 <div class="form-group">
@@ -263,6 +268,7 @@
 
             const formData = {
                 name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
                 account_number: document.getElementById('account_number').value,
                 ifsc_code: document.getElementById('ifsc_code').value,
                 bank_name: document.getElementById('bank_name').value,
@@ -287,7 +293,12 @@
 
                 if (data.success) {
                     resultDiv.classList.add('success');
-                    resultDiv.textContent = `✅ Success!\n\nMessage: ${data.message}\nTxn ID: ${data.txn_id}\nUTR: ${data.utr || 'Pending'}\nStatus: ${data.status}`;
+                    resultDiv.innerHTML = `<div>✅ Success!</div><br>
+                                           <div>Message: ${data.message}</div>
+                                           <div>Txn ID: <span id="lastTxnId">${data.txn_id}</span></div>
+                                           <div>UTR: ${data.utr || 'Pending'}</div>
+                                           <div>Status: <span id="lastStatus">${data.status}</span></div><br>
+                                           <button onclick="checkPayoutStatus('${data.txn_id}')" style="padding: 8px 15px; background: #2d3436; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 Check Current Status</button>`;
                 } else {
                     resultDiv.classList.add('error');
                     resultDiv.textContent = `❌ Failed!\n\nError: ${data.message}\n\nRaw Response:\n${JSON.stringify(data.raw || {}, null, 2)}`;
@@ -302,6 +313,39 @@
                 resultDiv.textContent = 'Critical Error: ' + error.message;
             }
         });
+
+        async function checkPayoutStatus(txnId) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Checking...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${BASE_URL}api/kay2pay/payout/check-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ txn_id: txnId })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Status: ${data.status.toUpperCase()}\nUTR: ${data.utr || 'N/A'}\nMessage: ${data.message}`);
+                    if (document.getElementById('lastStatus')) {
+                        document.getElementById('lastStatus').textContent = data.status;
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Status Check Failed: ' + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 
