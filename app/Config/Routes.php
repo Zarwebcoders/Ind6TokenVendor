@@ -39,9 +39,14 @@ $routes->get('login', 'VendorAuth::login'); // Placeholder
 
 // API Routes for Payment Gateway
 $routes->post('api/payment/initiate', 'PaymentApi::initiate');
-$routes->post('api/payment/verify', 'PaymentApi::verifyPayment'); // UPI response verification
-$routes->post('api/payment/query', 'PaymentApi::queryStatus'); // Query payment status
-$routes->post('api/payment/update', 'PaymentApi::updateStatus'); // Manual update (legacy)
+$routes->post('api/payment/verify', 'PaymentApi::verifyPayment');
+$routes->post('api/payment/query', 'PaymentApi::queryStatus');
+
+// Vendor External API (V1)
+$routes->group('api/v1', ['filter' => 'vendorAuth'], function ($routes) {
+    $routes->post('payment/create', 'VendorApiController::createPayment');
+    $routes->post('payment/status', 'VendorApiController::getStatus');
+});
 
 // Payraizen Gateway Routes
 $routes->post('api/payment/payraizen/initiate', 'PaymentApi::createPayraizenRequest');

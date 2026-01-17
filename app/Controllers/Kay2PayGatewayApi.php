@@ -432,6 +432,11 @@ class Kay2PayGatewayApi extends Controller
 
             log_message('info', 'Kay2Pay Payment marked as successful: ' . $orderId);
 
+            // Notify Vendor if this was an API transaction
+            if (!empty($payment['vendor_id'])) {
+                $this->notifyVendor($payment['id']);
+            }
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Payment successful',
@@ -445,6 +450,44 @@ class Kay2PayGatewayApi extends Controller
                 'success' => false,
                 'message' => 'Failed to update payment status'
             ]);
+        }
+    }
+
+    /**
+     * Notify Vendor via Webhook
+     */
+    private function notifyVendor($paymentId)
+    {
+        try {
+            $payment = $this->paymentModel->find($paymentId);
+            $vendorModel = new \App\Models\VendorModel();
+            $vendor = $vendorModel->find($payment['vendor_id']);
+
+            if (!$vendor || empty($vendor['webhook_url'])) {
+                return;
+            }
+
+            $payload = [
+                'order_id' => $payment['txn_id'],
+                'amount' => $payment['amount'],
+                'status' => 'success',
+                'utr' => $payment['utr'],
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+
+            log_message('info', "Forwarding Webhook to Vendor (ID: {$vendor['id']}): " . $vendor['webhook_url']);
+
+            $ch = curl_init($vendor['webhook_url']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_exec($ch);
+            curl_close($ch);
+
+        } catch (\Exception $e) {
+            log_message('error', "Failed to notify vendor for payment {$paymentId}: " . $e->getMessage());
         }
     }
 
