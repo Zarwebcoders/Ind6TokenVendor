@@ -1,215 +1,121 @@
-<!DOCTYPE html>
-<html lang="en">
+<?= view('partials/head', ['title' => 'Vendor Dashboard']) ?>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Vendor Panel</title>
-    <style>
-        :root {
-            --primary: #6366f1;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-        }
+<body class="bg-light dark:bg-dark text-textprimary">
+    <div class="flex w-full min-h-screen">
+        <?= view('partials/sidebar') ?>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        <!-- Main Wrapper -->
+        <div class="flex-1 xl:ml-64 w-full bg-white dark:bg-dark min-h-screen transition-all">
+            <?= view('partials/header') ?>
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-        }
+            <!-- Body Content -->
+            <main class="p-[30px] container mx-auto">
+                <div class="header mb-8">
+                    <h1 class="text-2xl font-bold">Welcome, <?= esc($vendor['name']) ?></h1>
+                    <p class="text-gray-500">Overview of your payment activity and integration status.</p>
+                </div>
 
-        .container {
-            display: flex;
-            min-height: 100vh;
-        }
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-border">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h5 class="text-base font-bold text-gray-400 uppercase text-xs mb-1">Total Transactions
+                                </h5>
+                                <h2 class="text-3xl font-bold text-primary"><?= $total_payments ?></h2>
+                            </div>
+                            <span
+                                class="w-12 h-12 rounded-full bg-lightprimary flex items-center justify-center text-primary">
+                                <iconify-icon icon="tabler:layers-intersect" width="24"></iconify-icon>
+                            </span>
+                        </div>
+                    </div>
 
-        .main {
-            flex: 1;
-            padding: 40px;
-        }
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-border">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h5 class="text-base font-bold text-gray-400 uppercase text-xs mb-1">Success Rate</h5>
+                                <h2 class="text-3xl font-bold text-success">
+                                    <?php
+                                    $rate = $total_payments > 0 ? ($success_payments / $total_payments) * 100 : 0;
+                                    echo number_format($rate, 1) . '%';
+                                    ?>
+                                </h2>
+                            </div>
+                            <span
+                                class="w-12 h-12 rounded-full bg-lightsuccess flex items-center justify-center text-success">
+                                <iconify-icon icon="tabler:trend-up" width="24"></iconify-icon>
+                            </span>
+                        </div>
+                    </div>
 
-        .nav-tabs {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .nav-tab {
-            padding: 10px 0;
-            color: var(--text-muted);
-            text-decoration: none;
-            border-bottom: 2px solid transparent;
-        }
-
-        .nav-tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-            font-weight: 600;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, min-min-content, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            font-weight: 600;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            text-align: left;
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
-
-        th {
-            background: #f9fafb;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-pending {
-            background: #fef9c3;
-            color: #854d0e;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <div class="main">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h1>Welcome,
-                    <?= $vendor['name'] ?>
-                </h1>
-                <a href="<?= base_url('auth/logout') ?>" style="color: #ef4444; font-weight: 600;">Logout</a>
-            </div>
-
-            <div class="nav-tabs">
-                <a href="<?= base_url('vendor/dashboard') ?>" class="nav-tab active">Overview</a>
-                <a href="<?= base_url('vendor/api-settings') ?>" class="nav-tab">API Keys</a>
-                <a href="<?= base_url('vendor/api-docs') ?>" class="nav-tab">Documentation</a>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Total Transactions</div>
-                    <div class="stat-value">
-                        <?= $total_payments ?>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-border">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h5 class="text-base font-bold text-gray-400 uppercase text-xs mb-1">Live Endpoint</h5>
+                                <p class="text-sm font-mono text-gray-600 dark:text-gray-400 break-all">
+                                    v1/payment/create</p>
+                            </div>
+                            <span
+                                class="w-12 h-12 rounded-full bg-lightinfo flex items-center justify-center text-info">
+                                <iconify-icon icon="tabler:plug-connected" width="24"></iconify-icon>
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Successful Payments</div>
-                    <div class="stat-value">
-                        <?= $success_payments ?>
+
+                <!-- Recent Transactions -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-border overflow-hidden">
+                    <div class="p-6 border-b border-border flex justify-between items-center">
+                        <h5 class="text-lg font-bold">Recent API Transactions</h5>
+                        <a href="<?= base_url('vendor/api-docs') ?>" class="text-primary text-sm hover:underline">View
+                            Docs &rarr;</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 dark:bg-gray-700 text-gray-500 uppercase text-xs">
+                                <tr>
+                                    <th class="px-6 py-4">Date</th>
+                                    <th class="px-6 py-4">Order ID</th>
+                                    <th class="px-6 py-4">Amount</th>
+                                    <th class="px-6 py-4">UTR</th>
+                                    <th class="px-6 py-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <?php foreach ($recent_payments as $p): ?>
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                        <td class="px-6 py-4 whitespace-nowrap text-gray-500">
+                                            <?= date('d M, Y H:i', strtotime($p['created_at'])) ?></td>
+                                        <td class="px-6 py-4 font-medium"><?= $p['txn_id'] ?></td>
+                                        <td class="px-6 py-4 font-bold text-dark dark:text-white">
+                                            ₹<?= number_format($p['amount'], 2) ?></td>
+                                        <td class="px-6 py-4 text-xs font-mono">
+                                            <?= $p['utr'] ?: '<span class="text-gray-400 italic">Pending</span>' ?></td>
+                                        <td class="px-6 py-4">
+                                            <?php
+                                            $badge = $p['status'] == 'success' ? 'bg-lightsuccess text-success' : ($p['status'] == 'pending' ? 'bg-lightwarning text-warning' : 'bg-lighterror text-error');
+                                            ?>
+                                            <span
+                                                class="px-2.5 py-1 rounded text-xs font-bold uppercase <?= $badge ?>"><?= $p['status'] ?></span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if (empty($recent_payments)): ?>
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">No transactions
+                                            found in this account yet.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">Recent Transactions</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Order ID</th>
-                            <th>Amount</th>
-                            <th>UTR / Reference</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recent_payments as $p): ?>
-                            <tr>
-                                <td>
-                                    <?= date('d M, Y H:i', strtotime($p['created_at'])) ?>
-                                </td>
-                                <td>
-                                    <?= $p['txn_id'] ?>
-                                </td>
-                                <td>₹
-                                    <?= $p['amount'] ?>
-                                </td>
-                                <td>
-                                    <?= $p['utr'] ?: '-' ?>
-                                </td>
-                                <td>
-                                    <span class="status-badge status-<?= $p['status'] ?>">
-                                        <?= ucfirst($p['status']) ?>
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        <?php if (empty($recent_payments)): ?>
-                            <tr>
-                                <td colspan="5" style="text-align: center; color: var(--text-muted);">No transactions found
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+            </main>
         </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
 </body>
 
 </html>

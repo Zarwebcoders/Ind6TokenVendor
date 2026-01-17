@@ -1,301 +1,138 @@
-<!DOCTYPE html>
-<html lang="en">
+<?= view('partials/head', ['title' => 'API Settings']) ?>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Settings | Developer Dashboard</title>
-    <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --success: #10b981;
-        }
+<body class="bg-light dark:bg-dark text-textprimary">
+    <div class="flex w-full min-h-screen">
+        <?= view('partials/sidebar') ?>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        <!-- Main Wrapper -->
+        <div class="flex-1 xl:ml-64 w-full bg-white dark:bg-dark min-h-screen transition-all">
+            <?= view('partials/header') ?>
 
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-
-        .dashboard-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar sidebar styling would go here, omitting for brevity in test view */
-
-        .main-content {
-            flex: 1;
-            padding: 40px;
-        }
-
-        .header {
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        .header p {
-            color: var(--text-muted);
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header {
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        input[type="text"],
-        input[type="url"],
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            background: #f1f5f9;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: white;
-        }
-
-        .token-display {
-            background: #1e293b;
-            color: #38bdf8;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 14px;
-            position: relative;
-            margin-bottom: 10px;
-            word-break: break-all;
-        }
-
-        .copy-btn {
-            position: absolute;
-            right: 10px;
-            top: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .copy-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: 0.2s;
-            font-size: 14px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-
-        .btn-outline:hover {
-            background: var(--bg);
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .alert-success {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #bbf7d0;
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .nav-tab {
-            padding: 10px 0;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
-        }
-
-        .nav-tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .badge-live {
-            background: #dcfce7;
-            color: #166534;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="dashboard-container">
-        <div class="main-content">
-            <div class="header">
-                <h1>Developer Settings</h1>
-                <p>Manage your API credentials and webhook configurations.</p>
-            </div>
-
-            <div class="nav-tabs">
-                <a href="<?= base_url('vendor/dashboard') ?>" class="nav-tab">Overview</a>
-                <a href="<?= base_url('vendor/api-settings') ?>" class="nav-tab active">API Keys</a>
-                <a href="<?= base_url('vendor/api-docs') ?>" class="nav-tab">Documentation</a>
-            </div>
-
-            <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success">
-                    <?= session()->getFlashdata('success') ?>
-                </div>
-            <?php endif; ?>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Production API Keys</div>
-                    <span class="badge badge-live">Active</span>
+            <!-- Body Content -->
+            <main class="p-[30px] container mx-auto">
+                <div class="header mb-8">
+                    <h1 class="text-2xl font-bold">API Credentials</h1>
+                    <p class="text-gray-500">Manage your bearer tokens, IP whitelist, and webhook notifications.</p>
                 </div>
 
-                <div class="form-group">
-                    <label>Bearer Token</label>
-                    <div class="token-display">
-                        <span id="tokenText">
-                            <?= $vendor['api_token'] ?: 'No token generated yet' ?>
-                        </span>
-                        <button class="copy-btn" onclick="copyToClipboard('tokenText')">Copy</button>
+                <?php if (session()->getFlashdata('success')): ?>
+                    <div class="p-4 mb-6 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400 border border-green-200"
+                        role="alert">
+                        <span class="font-bold">Success!</span> <?= session()->getFlashdata('success') ?>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-muted);">Use this token in your
-                        <code>Authorization: Bearer</code> header.</p>
-                </div>
+                <?php endif; ?>
 
-                <form action="<?= base_url('vendor/api-settings/update') ?>" method="POST">
-                    <input type="hidden" name="action" value="generate_token">
-                    <button type="submit" class="btn btn-outline">Generate New Token</button>
-                </form>
-            </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Token Information -->
+                    <div class="space-y-6">
+                        <div class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border border-border">
+                            <div class="flex justify-between items-center mb-6">
+                                <h5 class="text-lg font-bold">Production Bearer Token</h5>
+                                <span
+                                    class="bg-lightsuccess text-success text-[10px] font-bold px-2 py-1 rounded-full uppercase">Live</span>
+                            </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Security & Webhooks</div>
-                </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Public
+                                        Token</label>
+                                    <div
+                                        class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900 border border-border rounded-lg group">
+                                        <code
+                                            class="flex-1 text-sm font-mono text-primary font-bold overflow-hidden text-ellipsis"
+                                            id="tokenText"><?= $vendor['api_token'] ?: 'Not generated' ?></code>
+                                        <button onclick="copyTo('tokenText')"
+                                            class="p-2 text-gray-400 hover:text-primary transition-colors">
+                                            <iconify-icon icon="tabler:copy" width="20"></iconify-icon>
+                                        </button>
+                                    </div>
+                                </div>
 
-                <form action="<?= base_url('vendor/api-settings/update') ?>" method="POST">
-                    <input type="hidden" name="action" value="update_ips">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">API
+                                        Secret</label>
+                                    <div
+                                        class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900 border border-border rounded-lg">
+                                        <code
+                                            class="flex-1 text-xs font-mono text-gray-500 overflow-hidden text-ellipsis"><?= $vendor['api_secret'] ? '••••••••••••••••••••••••••••••••' : 'Not generated' ?></code>
+                                        <iconify-icon icon="tabler:lock" width="18"
+                                            class="text-gray-300"></iconify-icon>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-2">The secret key is used for signature
+                                        verification in future updates.</p>
+                                </div>
+                            </div>
 
-                    <div class="form-group">
-                        <label for="whitelisted_ips">Whitelisted IP Addresses</label>
-                        <input type="text" id="whitelisted_ips" name="whitelisted_ips"
-                            value="<?= $vendor['whitelisted_ips'] ?>" placeholder="e.g. 192.168.1.1, 203.0.113.5">
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Comma separated list of
-                            IPs allowed to call the API. Leave empty to allow all IPs.</p>
+                            <hr class="my-8 border-border">
+
+                            <form action="<?= base_url('vendor/api-settings/update') ?>" method="POST">
+                                <input type="hidden" name="action" value="generate_token">
+                                <button type="submit"
+                                    class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-gray-700 border border-primary text-primary font-bold rounded-lg hover:bg-lightprimary transition-colors text-sm"
+                                    onclick="return confirm('WARNING: Generating a new token will immediately invalidate your current one. Are you sure?')">
+                                    <iconify-icon icon="tabler:refresh" width="18"></iconify-icon>
+                                    Regenerate API Keys
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="webhook_url">Webhook Notification URL</label>
-                        <input type="url" id="webhook_url" name="webhook_url" value="<?= $vendor['webhook_url'] ?>"
-                            placeholder="https://your-app.com/api/payment-webhook">
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">We will send a POST
-                            request to this URL whenever a payment is successful.</p>
-                    </div>
+                    <!-- Webhook and Security Settings -->
+                    <div class="space-y-6">
+                        <div class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border border-border">
+                            <h5 class="text-lg font-bold mb-6">Security & Automation</h5>
+                            <form action="<?= base_url('vendor/api-settings/update') ?>" method="POST"
+                                class="space-y-6">
+                                <input type="hidden" name="action" value="update_ips">
 
-                    <button type="submit" class="btn btn-primary">Save API Configuration</button>
-                </form>
-            </div>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-sm font-bold text-dark dark:text-white">
+                                        <iconify-icon icon="tabler:shield-check"
+                                            class="text-success text-lg"></iconify-icon>
+                                        Whitelisted IP Addresses
+                                    </label>
+                                    <textarea name="whitelisted_ips" rows="3"
+                                        class="w-full bg-gray-50 dark:bg-gray-900 border border-border rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                        placeholder="Enter server IPs separated by commas (e.g. 192.168.1.1, 8.8.4.4)"><?= $vendor['whitelisted_ips'] ?></textarea>
+                                    <p class="text-[11px] text-gray-400">If left empty, any IP will be allowed (not
+                                        recommended for production). Only your server IP should be here.</p>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-sm font-bold text-dark dark:text-white">
+                                        <iconify-icon icon="tabler:webhook" class="text-info text-lg"></iconify-icon>
+                                        Webhook URL
+                                    </label>
+                                    <input type="url" name="webhook_url" value="<?= $vendor['webhook_url'] ?>"
+                                        class="w-full bg-gray-50 dark:bg-gray-900 border border-border rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                        placeholder="https://your-domain.com/callbacks/payment-success">
+                                    <p class="text-[11px] text-gray-400">We will send a POST request with the payment
+                                        payload to this URL when a transaction is completed.</p>
+                                </div>
+
+                                <button type="submit"
+                                    class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary text-dark font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-lg active:scale-[0.98]">
+                                    <iconify-icon icon="tabler:device-floppy" width="20"></iconify-icon>
+                                    Update Configuration
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
     <script>
-        function copyToClipboard(id) {
-            const text = document.getElementById(id).innerText;
-            if (text.includes('No token')) return;
-            navigator.clipboard.writeText(text).then(() => {
+        function copyTo(id) {
+            const el = document.getElementById(id);
+            if (el.innerText.includes('Not generated')) return;
+            navigator.clipboard.writeText(el.innerText).then(() => {
                 alert('Copied to clipboard!');
             });
         }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
 </body>
 
 </html>

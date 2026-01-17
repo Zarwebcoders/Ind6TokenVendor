@@ -1,290 +1,188 @@
-<!DOCTYPE html>
-<html lang="en">
+<?= view('partials/head', ['title' => 'API Documentation']) ?>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Documentation | Developer Guide</title>
-    <style>
-        :root {
-            --primary: #6366f1;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --code-bg: #1e293b;
-        }
+<body class="bg-light dark:bg-dark text-textprimary">
+    <div class="flex w-full min-h-screen">
+        <?= view('partials/sidebar') ?>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        <!-- Main Wrapper -->
+        <div class="flex-1 xl:ml-64 w-full bg-white dark:bg-dark min-h-screen transition-all">
+            <?= view('partials/header') ?>
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
+            <!-- Body Content -->
+            <main class="p-[30px] container mx-auto">
+                <div class="header mb-12 flex flex-col items-center text-center">
+                    <span
+                        class="bg-lightprimary text-primary px-3 py-1 rounded-full text-xs font-bold uppercase mb-4">Documentation</span>
+                    <h1 class="text-3xl font-extrabold lg:text-4xl">Developer Integration API</h1>
+                    <p class="text-gray-500 mt-2 max-w-2xl text-lg">Detailed guide for integrating our white-label
+                        payment processing engine into your own products.</p>
+                </div>
 
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <!-- Sidebar Navigation -->
+                    <div class="lg:col-span-1">
+                        <div class="sticky top-24 space-y-2">
+                            <h6 class="text-xs font-bold text-gray-400 uppercase px-4 mb-4">Endpoints</h6>
+                            <a href="#auth"
+                                class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm hover:bg-lightprimary hover:text-primary transition-colors font-medium">Authentication</a>
+                            <a href="#create"
+                                class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm hover:bg-lightprimary hover:text-primary transition-colors font-medium text-gray-600 dark:text-gray-400">Create
+                                Payment</a>
+                            <a href="#status"
+                                class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm hover:bg-lightprimary hover:text-primary transition-colors font-medium text-gray-600 dark:text-gray-400">Check
+                                Status</a>
+                            <a href="#webhooks"
+                                class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm hover:bg-lightprimary hover:text-primary transition-colors font-medium text-gray-600 dark:text-gray-400">Webhooks</a>
+                        </div>
+                    </div>
 
-        .header {
-            margin-bottom: 50px;
-            text-align: center;
-        }
+                    <!-- Main Documentation Area -->
+                    <div class="lg:col-span-3 space-y-16">
 
-        .header h1 {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
+                        <!-- Auth Section -->
+                        <section id="auth">
+                            <h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+                                <span
+                                    class="w-8 h-8 rounded bg-lightprimary text-primary flex items-center justify-center text-sm">01</span>
+                                Authentication
+                            </h2>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 font-medium">All requests must be
+                                authenticated using the <strong>Bearer Token</strong> from your settings page. Requests
+                                must be sent over HTTPS.</p>
+                            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                                <div
+                                    class="px-4 py-2 bg-gray-800 border-b border-gray-700 flex justify-between items-center text-xs text-gray-400 font-mono">
+                                    <span>Request Header</span>
+                                    <span>HTTP</span>
+                                </div>
+                                <pre
+                                    class="p-6 text-yellow-400 text-sm font-mono overflow-auto">Authorization: Bearer YOUR_API_TOKEN</pre>
+                            </div>
+                        </section>
 
-        .header p {
-            color: var(--text-muted);
-            font-size: 18px;
-        }
+                        <!-- Create Payment Section -->
+                        <section id="create">
+                            <div class="flex items-center gap-3 mb-4">
+                                <h2 class="text-2xl font-bold flex items-center gap-3">
+                                    <span
+                                        class="w-8 h-8 rounded bg-lightprimary text-primary flex items-center justify-center text-sm">02</span>
+                                    Create Payment
+                                </h2>
+                                <span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded">POST</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 font-medium">Initiates a new payment request
+                                and returns a UPI intent URL or gateway link.</p>
 
-        .section {
-            margin-bottom: 60px;
-        }
+                            <div
+                                class="bg-gray-50 dark:bg-gray-800 border border-border rounded-xl p-4 font-mono text-sm mb-6 flex items-center gap-3">
+                                <span class="text-primary font-bold">API_URL</span>
+                                <span class="text-gray-500">/api/v1/payment/create</span>
+                            </div>
 
-        .section h2 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--primary);
-            display: inline-block;
-            padding-bottom: 5px;
-        }
+                            <div class="overflow-x-auto mb-8 border border-border rounded-xl">
+                                <table class="w-full text-left text-sm">
+                                    <thead
+                                        class="bg-gray-50 dark:bg-gray-700 text-xs uppercase text-gray-500 font-bold">
+                                        <tr>
+                                            <th class="px-6 py-4">Field</th>
+                                            <th class="px-6 py-4">Type</th>
+                                            <th class="px-6 py-4">Required</th>
+                                            <th class="px-6 py-4">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <td class="px-6 py-4 font-mono font-bold">amount</td>
+                                            <td class="px-6 py-4 text-xs">float</td>
+                                            <td class="px-6 py-4 text-error font-bold text-xs uppercase">Yes</td>
+                                            <td class="px-6 py-4 text-gray-500">Amount in INR (e.g. 500.00).</td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <td class="px-6 py-4 font-mono font-bold">customer_name</td>
+                                            <td class="px-6 py-4 text-xs">string</td>
+                                            <td class="px-6 py-4 text-error font-bold text-xs uppercase">Yes</td>
+                                            <td class="px-6 py-4 text-gray-500">Name of the customer for display on QR.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
 
-        .endpoint {
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-
-        .method-badge {
-            background: #6366f1;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 13px;
-            margin-right: 10px;
-        }
-
-        .url {
-            font-family: monospace;
-            font-weight: 600;
-            color: #475569;
-        }
-
-        .param-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 14px;
-        }
-
-        .param-table th,
-        .param-table td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .param-table th {
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.1em;
-        }
-
-        .required {
-            color: #ef4444;
-            font-weight: bold;
-        }
-
-        pre {
-            background: var(--code-bg);
-            color: #38bdf8;
-            padding: 20px;
-            border-radius: 10px;
-            overflow-x: auto;
-            font-size: 14px;
-            margin: 15px 0;
-        }
-
-        .nav-links {
-            margin-bottom: 40px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .nav-links a {
-            color: var(--primary);
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .info-box {
-            background: #eff6ff;
-            border-left: 4px solid #3b82f6;
-            padding: 15px;
-            border-radius: 0 8px 8px 0;
-            margin: 20px 0;
-            font-size: 14px;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <div class="nav-links">
-            <a href="<?= base_url('vendor/dashboard') ?>">← Back to Dashboard</a>
-            <a href="<?= base_url('vendor/api-settings') ?>">API Keys</a>
-        </div>
-
-        <div class="header">
-            <h1>Vendor API v1.0</h1>
-            <p>Integrate our payment collection engine into your own application.</p>
-        </div>
-
-        <div class="section">
-            <h2>Authentication</h2>
-            <p>All API requests must include your Bearer Token in the HTTP headers. You can generate this token from
-                your dashboard settings.</p>
-            <pre>Authorization: Bearer YOUR_API_TOKEN</pre>
-            <div class="info-box">
-                <strong>Tip:</strong> Ensure you have whitelisted your server's IP in the settings to avoid 403
-                Forbidden errors.
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>1. Create Payment</h2>
-            <p>Initiate a new UPI payment request. This will return a <code>payment_url</code> which you can show to
-                your customer as a QR code or an intent link.</p>
-
-            <div class="endpoint">
-                <span class="method-badge">POST</span>
-                <span class="url">/api/v1/payment/create</span>
-
-                <table class="param-table">
-                    <thead>
-                        <tr>
-                            <th>Parameter</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>amount</code> <span class="required">*</span></td>
-                            <td>Float</td>
-                            <td>The amount to collect in INR.</td>
-                        </tr>
-                        <tr>
-                            <td><code>customer_name</code> <span class="required">*</span></td>
-                            <td>String</td>
-                            <td>The name of the payer.</td>
-                        </tr>
-                        <tr>
-                            <td><code>customer_mobile</code></td>
-                            <td>String</td>
-                            <td>10-digit mobile number.</td>
-                        </tr>
-                        <tr>
-                            <td><code>customer_email</code></td>
-                            <td>String</td>
-                            <td>Email address of the payer.</td>
-                        </tr>
-                        <tr>
-                            <td><code>customer_id</code></td>
-                            <td>String</td>
-                            <td>Your internal reference for this user.</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <strong>Request Example:</strong>
-                <pre>
-{
-    "amount": 500.00,
-    "customer_name": "John Doe",
-    "customer_id": "ORDER_123456"
+                            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                                <div
+                                    class="px-4 py-2 bg-gray-800 border-b border-gray-700 flex justify-between items-center text-xs text-gray-400 font-mono">
+                                    <span>Sample Response</span>
+                                    <span>JSON</span>
+                                </div>
+                                <pre class="p-6 text-green-400 text-sm font-mono overflow-auto">{
+  "success": true,
+  "order_id": "ORD_20261750",
+  "payment_url": "upi://pay?pa=zarweb@...",
+  "message": "Transaction created successfully"
 }</pre>
+                            </div>
+                        </section>
 
-                <strong>Success Response:</strong>
-                <pre>
-{
-    "success": true,
-    "order_id": "KAY176864...",
-    "payment_url": "upi://pay?pa=...",
-    "message": "Transaction created successfully"
+                        <!-- Status Check Section -->
+                        <section id="status">
+                            <div class="flex items-center gap-3 mb-4">
+                                <h2 class="text-2xl font-bold flex items-center gap-3">
+                                    <span
+                                        class="w-8 h-8 rounded bg-lightprimary text-primary flex items-center justify-center text-sm">03</span>
+                                    Check Status
+                                </h2>
+                                <span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded">POST</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 font-medium">Query the current status of a
+                                transaction assigned to your vendor account.</p>
+
+                            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                                <div
+                                    class="px-4 py-2 bg-gray-800 border-b border-gray-700 flex justify-between items-center text-xs text-gray-400 font-mono">
+                                    <span>Request Body</span>
+                                    <span>JSON</span>
+                                </div>
+                                <pre class="p-6 text-yellow-400 text-sm font-mono overflow-auto">{
+  "order_id": "ORD_20261750"
 }</pre>
-            </div>
-        </div>
+                            </div>
+                        </section>
 
-        <div class="section">
-            <h2>2. Check Status</h2>
-            <p>Verify the status of a specific transaction manually.</p>
-            <div class="endpoint">
-                <span class="method-badge">POST</span>
-                <span class="url">/api/v1/payment/status</span>
+                        <!-- Webhooks Section -->
+                        <section id="webhooks" class="bg-lightprimary/20 p-8 rounded-2xl border border-lightprimary">
+                            <div class="flex items-center gap-3 mb-6">
+                                <h2 class="text-2xl font-bold flex items-center gap-3">
+                                    <iconify-icon icon="tabler:webhook" class="text-primary"></iconify-icon>
+                                    Automated Webhooks
+                                </h2>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-8 font-medium">To avoid polling for every
+                                transaction, the engine will automatically forward a success response to your
+                                <strong>Webhook URL</strong> when we detect a completed payment.</p>
 
-                <table class="param-table">
-                    <thead>
-                        <tr>
-                            <th>Parameter</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>order_id</code> <span class="required">*</span></td>
-                            <td>String</td>
-                            <td>The Order ID returned during creation.</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <strong>Success Response:</strong>
-                <pre>
-{
-    "success": true,
-    "status": "success",
-    "utr": "REF260117...",
-    "message": "Payment verified successfully"
+                            <div
+                                class="bg-white dark:bg-gray-900 border border-lightprimary rounded-xl overflow-hidden">
+                                <div
+                                    class="px-4 py-2 bg-lightprimary text-primary flex justify-between items-center text-xs font-bold uppercase">
+                                    <span>Data Delivered to your server</span>
+                                </div>
+                                <pre class="p-6 text-sm font-mono overflow-auto">{
+  "order_id": "ORD_20261750",
+  "amount": 500,
+  "status": "success",
+  "utr": "REF260117...",
+  "timestamp": "2026-01-17 18:50:00"
 }</pre>
-            </div>
-        </div>
+                            </div>
+                        </section>
 
-        <div class="section">
-            <h2>3. Webhooks</h2>
-            <p>If you configure a <code>Webhook URL</code> in your settings, our server will send a POST request to you
-                as soon as a payment is completed.</p>
-            <strong>Payload delivered to you:</strong>
-            <pre>
-{
-    "order_id": "KAY123456",
-    "amount": 500.00,
-    "status": "success",
-    "utr": "REF987654321",
-    "timestamp": "2026-01-17 18:30:00"
-}</pre>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
 </body>
 
 </html>
