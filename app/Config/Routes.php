@@ -73,6 +73,7 @@ $routes->post('api/vmpe/check-status', 'VmpeGatewayApi::checkStatus');
 $routes->post('api/kay2pay/initiate', 'Kay2PayGatewayApi::initiatePayment');
 $routes->post('api/kay2pay/webhook', 'Kay2PayGatewayApi::handleWebhook');
 $routes->post('api/kay2pay/check-status', 'Kay2PayGatewayApi::checkStatus');
+$routes->post('api/kay2pay/payout/initiate', 'Kay2PayPayoutApi::initiatePayout');
 
 // BharatPe Gateway Routes (Automatic Verification)
 $routes->post('api/bharatpe/create', 'BharatPeApi::createPayment');
