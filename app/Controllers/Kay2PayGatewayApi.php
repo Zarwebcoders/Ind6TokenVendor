@@ -104,13 +104,16 @@ class Kay2PayGatewayApi extends Controller
 
             $responseData = json_decode($response, true);
 
-            // Check if payment was initiated successfully
-            // Based on subagent output, success is often 'status' => true or similar
-            // Usually Kay2Pay returns status 201 or 200 on success
-            if (($httpCode === 200 || $httpCode === 201) && isset($responseData['status']) && ($responseData['status'] === true || $responseData['status'] === 'true')) {
+            // Get the payment URL (UPI Intent/QR)
+            $paymentUrl = $responseData['payment_url'] ?? $responseData['data']['payment_url'] ?? $responseData['qr_code'] ?? '';
 
-                // Get the payment URL (UPI Intent/QR)
-                $paymentUrl = $responseData['payment_url'] ?? $responseData['data']['payment_url'] ?? $responseData['qr_code'] ?? '';
+            // Check status or success field from gateway
+            $gatewayStatus = $responseData['status'] ?? $responseData['success'] ?? null;
+            $isSuccessful = ($httpCode === 200 || $httpCode === 201) &&
+                ($gatewayStatus === true || $gatewayStatus === 'true' || $gatewayStatus === 'success' || !empty($paymentUrl));
+
+            // Check if payment was initiated successfully
+            if ($isSuccessful) {
 
                 // Save payment to database
                 $this->createPaymentRequest($orderId, $userId, $amount, 'kay2pay', $paymentUrl, $responseData);
@@ -256,7 +259,7 @@ class Kay2PayGatewayApi extends Controller
                 $responseData = json_decode($response, true);
 
                 // Usually Kay2Pay query returns { status: true, data: { status: 'success', ... } }
-                $status = $responseData['data']['status'] ?? $responseData['status'] ?? 'pending';
+                $status = $responseData['data']['status'] ?? $responseData['status'] ?? $responseData['success'] ?? 'pending';
 
                 if ($status === 'success' || $status === 'completed' || $status === true || $status === 'true') {
                     $utr = $responseData['data']['utr_no'] ?? $responseData['utr'] ?? null;
