@@ -412,8 +412,16 @@
 
                 if (data.success) {
                     if (data.payment_url) {
-                        showQRCode(data.payment_url, data.order_id, amount);
-                        showAlert('success', 'Payment initiated! Order ID: ' + data.order_id);
+                        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+                        if (isMobile && data.payment_url.startsWith('upi://')) {
+                            // Automatically try to open UPI app on mobile
+                            window.location.href = data.payment_url;
+                            showAlert('success', 'Opening UPI App... Order ID: ' + data.order_id);
+                        } else {
+                            showQRCode(data.payment_url, data.order_id, amount);
+                            showAlert('success', 'Payment initiated! Order ID: ' + data.order_id);
+                        }
                         startPaymentPolling(data.order_id);
                     } else {
                         showAlert('success', 'Payment initiated successfully! Order ID: ' + data.order_id);
@@ -445,7 +453,7 @@
             if (qrString.startsWith('data:image') || qrString.startsWith('http')) {
                 // If it's a URL or base64 image
                 if (qrString.includes('upi://')) {
-                    // UPI Link
+                    // UPI Link fallback
                     payNowBtn.href = qrString;
                     payNowBtn.style.display = 'block';
                     modalTitle.textContent = "UPI Payment";
@@ -459,6 +467,11 @@
                 payNowBtn.style.display = 'block';
                 modalTitle.textContent = "UPI Payment";
                 modalDesc.textContent = "Click below to pay via UPI app";
+
+                // If on mobile, try to open automatically even if showQRCode was called
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    window.location.href = qrString;
+                }
             }
 
             document.getElementById('orderId').textContent = orderId;
