@@ -273,34 +273,44 @@ class Kay2PayGatewayApi extends Controller
             if ($httpCode === 200) {
                 $responseData = json_decode($response, true);
 
-                // Usually Kay2Pay query returns { status: 'success', data: { status: 'SUCCESS', utr_no: '...' } }
-                $status = $responseData['data']['status'] ?? $responseData['status'] ?? $responseData['success'] ?? 'pending';
+                // 1. Check outer API status
+                $apiStatus = strtolower((string) ($responseData['status'] ?? ''));
 
-                // Make status check case-insensitive
-                $normalizedStatus = strtoupper((string) $status);
+                if ($apiStatus === 'success' && isset($responseData['data'])) {
+                    $data = $responseData['data'];
+                    // 2. Check inner transaction status (success/failed/pending)
+                    $txnStatus = strtoupper((string) ($data['status'] ?? 'PENDING'));
 
-                if (in_array($normalizedStatus, ['SUCCESS', 'COMPLETED', 'TRUE', '1'])) {
-                    $utr = $responseData['data']['utr_no'] ?? $responseData['utr_no'] ?? $responseData['data']['utr'] ?? $responseData['utr'] ?? null;
+                    if (in_array($txnStatus, ['SUCCESS', 'COMPLETED', 'TRUE', '1'])) {
+                        // Extract Bank UTR as per docs (data.utr_no)
+                        $utr = $data['utr_no'] ?? $data['utr'] ?? null;
 
-                    $this->paymentModel->update($payment['id'], [
-                        'status' => 'success',
-                        'gateway_txn_id' => $utr,
-                        'utr' => $utr,
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ]);
+                        $this->paymentModel->update($payment['id'], [
+                            'status' => 'success',
+                            'gateway_txn_id' => $utr,
+                            'utr' => $utr,
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
 
-                    return $this->response->setJSON([
-                        'success' => true,
-                        'status' => 'success',
-                        'message' => 'Payment verified successfully from gateway',
-                        'utr' => $utr,
-                        'amount' => $payment['amount']
-                    ]);
-                } elseif (in_array($normalizedStatus, ['FAILED', 'FAILURE', 'DECLINED', 'REJECTED'])) {
-                    $this->paymentModel->update($payment['id'], [
-                        'status' => 'failed',
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ]);
+                        return $this->response->setJSON([
+                            'success' => true,
+                            'status' => 'success',
+                            'message' => 'Payment verified successfully',
+                            'utr' => $utr,
+                            'amount' => $payment['amount']
+                        ]);
+                    } elseif (in_array($txnStatus, ['FAILED', 'FAILURE', 'DECLINED', 'REJECTED'])) {
+                        $this->paymentModel->update($payment['id'], [
+                            'status' => 'failed',
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
+
+                        return $this->response->setJSON([
+                            'success' => true,
+                            'status' => 'failed',
+                            'message' => 'Payment failed at gateway'
+                        ]);
+                    }
                 }
             }
 
