@@ -127,9 +127,11 @@ class Kay2PayGatewayApi extends Controller
 
             // Check if payment was initiated successfully
             if ($isSuccessful) {
+                // Get the gateway's internal transaction ID if available
+                $gatewayTxnId = $responseData['data']['txn_id'] ?? $responseData['txn_id'] ?? $orderId;
 
                 // Save payment to database
-                $this->createPaymentRequest($orderId, $userId, $amount, 'kay2pay', $paymentUrl, $responseData);
+                $this->createPaymentRequest($orderId, $userId, $amount, 'kay2pay', $paymentUrl, $responseData, $gatewayTxnId);
 
                 return $this->response->setJSON([
                     'success' => true,
@@ -165,35 +167,46 @@ class Kay2PayGatewayApi extends Controller
     public function handleWebhook()
     {
         try {
+            // Support both JSON and standard POST bodies
             $payload = $this->request->getJSON(true);
-
-            log_message('info', 'Kay2Pay Webhook Received: ' . json_encode($payload));
-
-            // Validate webhook data based on documentation finding:
-            // { "event_name": "payin", "data": { "status": "success", "utr_no": "...", "txn_id": "...", "udf1": "..." } }
-            if (!isset($payload['event_name']) || $payload['event_name'] !== 'payin' || !isset($payload['data'])) {
-                log_message('error', 'Kay2Pay Webhook: Invalid payload format');
-                return $this->response->setJSON([
-                    'success' => false,
-                    'message' => 'Invalid payload'
-                ]);
+            if (empty($payload)) {
+                $payload = $this->request->getPost();
             }
 
+            log_message('info', 'Kay2Pay Webhook Payload: ' . json_encode($payload));
+
+            if (empty($payload)) {
+                log_message('error', 'Kay2Pay Webhook: Empty payload received');
+                return $this->response->setJSON(['success' => false, 'message' => 'Empty payload']);
+            }
+
+            // The 'data' might be a nested object or the root itself
             $data = $payload['data'] ?? $payload;
-            $status = $data['status'] ?? $payload['status'] ?? 'failed';
+
+            // Log specifically if we found the data nested
+            if (isset($payload['data'])) {
+                log_message('info', 'Kay2Pay Webhook: Using nested data object');
+            }
+
+            // Check status - docs say success/failed/pending
+            $status = $data['status'] ?? $payload['status'] ?? 'pending';
             $normalizedStatus = strtoupper((string) $status);
 
+            log_message('info', 'Kay2Pay Webhook Normalized Status: ' . $normalizedStatus);
+
             if ($normalizedStatus !== 'SUCCESS' && $normalizedStatus !== 'COMPLETED') {
-                log_message('error', 'Kay2Pay Webhook: Status is not success - ' . $status);
+                log_message('error', 'Kay2Pay Webhook: Status is not successful - ' . $status);
                 return $this->response->setJSON([
                     'success' => false,
                     'message' => 'Payment not successful'
                 ]);
             }
 
-            // udf1 contains our $orderId, but check other fields just in case
+            // We store our internal ID in udf1
             $orderId = $data['udf1'] ?? $payload['udf1'] ?? $data['order_id'] ?? $payload['order_id'] ?? null;
             $utr = $data['utr_no'] ?? $payload['utr_no'] ?? $data['utr'] ?? $payload['utr'] ?? null;
+
+            log_message('info', "Kay2Pay Webhook for OrderID: {$orderId}, UTR: {$utr}");
 
             if (!$orderId) {
                 log_message('error', 'Kay2Pay Webhook: No order identifier (udf1) found in payload');
@@ -272,18 +285,21 @@ class Kay2PayGatewayApi extends Controller
 
             if ($httpCode === 200) {
                 $responseData = json_decode($response, true);
+                log_message('info', 'Kay2Pay Status Check Raw Response: ' . $response);
 
                 // 1. Check outer API status
-                $apiStatus = strtolower((string) ($responseData['status'] ?? ''));
+                $apiStatus = strtoupper((string) ($responseData['status'] ?? ($responseData['success'] ?? '')));
 
-                if ($apiStatus === 'success' && isset($responseData['data'])) {
-                    $data = $responseData['data'];
+                if (in_array($apiStatus, ['SUCCESS', 'TRUE', '1']) && (isset($responseData['data']) || isset($responseData['txn_status']))) {
+                    $data = $responseData['data'] ?? $responseData;
+
                     // 2. Check inner transaction status (success/failed/pending)
-                    $txnStatus = strtoupper((string) ($data['status'] ?? 'PENDING'));
+                    $txnStatus = strtoupper((string) ($data['status'] ?? ($data['txn_status'] ?? 'PENDING')));
+                    log_message('info', "Kay2Pay Inner Status: {$txnStatus} for {$orderId}");
 
                     if (in_array($txnStatus, ['SUCCESS', 'COMPLETED', 'TRUE', '1'])) {
                         // Extract Bank UTR as per docs (data.utr_no)
-                        $utr = $data['utr_no'] ?? $data['utr'] ?? null;
+                        $utr = $data['utr_no'] ?? $data['utr'] ?? $data['reference_no'] ?? null;
 
                         $this->paymentModel->update($payment['id'], [
                             'status' => 'success',
@@ -311,6 +327,8 @@ class Kay2PayGatewayApi extends Controller
                             'message' => 'Payment failed at gateway'
                         ]);
                     }
+                } else {
+                    log_message('error', 'Kay2Pay Status Check: API returned error or empty data - ' . $response);
                 }
             }
 
@@ -351,12 +369,12 @@ class Kay2PayGatewayApi extends Controller
     /**
      * Create payment request in database
      */
-    private function createPaymentRequest($orderId, $userId, $amount, $gateway, $paymentUrl = null, $gatewayResponse = null)
+    private function createPaymentRequest($orderId, $userId, $amount, $gateway, $paymentUrl = null, $gatewayResponse = null, $platformTxnId = null)
     {
         try {
             $data = [
                 'txn_id' => $orderId,
-                'platform_txn_id' => $orderId,
+                'platform_txn_id' => $platformTxnId ?? $orderId,
                 'vendor_id' => 1, // Default vendor
                 'user_id' => $userId,
                 'amount' => $amount,
