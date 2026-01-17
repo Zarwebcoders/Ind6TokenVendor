@@ -105,6 +105,9 @@ $routes->get('payment/vmpe/test', function () {
 $routes->get('payment/kay2pay/test', function () {
     return view('kay2pay_test');
 });
+$routes->get('payout/kay2pay/test', function () {
+    return view('kay2pay_payout_test');
+});
 $routes->post('api/payment/test/create', 'PaymentTest::createTestPayment');
 
 
