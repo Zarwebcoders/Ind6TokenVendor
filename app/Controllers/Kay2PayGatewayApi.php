@@ -105,12 +105,24 @@ class Kay2PayGatewayApi extends Controller
             $responseData = json_decode($response, true);
 
             // Get the payment URL (UPI Intent/QR)
-            $paymentUrl = $responseData['payment_url'] ?? $responseData['data']['payment_url'] ?? $responseData['qr_code'] ?? '';
+            $paymentUrl = $responseData['payment_url'] ??
+                $responseData['data']['payment_url'] ??
+                $responseData['data']['paymentUrl'] ??
+                $responseData['url'] ??
+                $responseData['data']['url'] ??
+                $responseData['qr_code'] ??
+                $responseData['upi_link'] ??
+                $responseData['data']['upi_link'] ?? '';
 
             // Check status or success field from gateway
             $gatewayStatus = $responseData['status'] ?? $responseData['success'] ?? null;
+            $gatewayMsg = $responseData['msg'] ?? $responseData['message'] ?? '';
+
+            // Sometimes gateways return success:false but message says success
+            $msgSuccess = (stripos($gatewayMsg, 'successfully') !== false || stripos($gatewayMsg, 'success') !== false);
+
             $isSuccessful = ($httpCode === 200 || $httpCode === 201) &&
-                ($gatewayStatus === true || $gatewayStatus === 'true' || $gatewayStatus === 'success' || !empty($paymentUrl));
+                ($gatewayStatus === true || $gatewayStatus === 'true' || $gatewayStatus === 'success' || $msgSuccess || !empty($paymentUrl));
 
             // Check if payment was initiated successfully
             if ($isSuccessful) {
@@ -124,7 +136,8 @@ class Kay2PayGatewayApi extends Controller
                     'intent' => true,
                     'paymentId' => $orderId,
                     'order_id' => $orderId,
-                    'message' => 'Payment initiated successfully'
+                    'message' => 'Payment initiated successfully',
+                    'debug_raw' => $responseData // Temporary for debugging
                 ]);
             } else {
                 $errorMessage = $responseData['msg'] ?? $responseData['message'] ?? 'Failed to create payment request';

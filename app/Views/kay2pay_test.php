@@ -409,6 +409,7 @@
                 });
 
                 const data = await response.json();
+                console.log('Payment Response:', data);
 
                 if (data.success) {
                     if (data.payment_url) {
