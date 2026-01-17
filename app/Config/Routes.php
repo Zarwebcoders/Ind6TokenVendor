@@ -114,6 +114,14 @@ $routes->get('payment/kay2pay/test', function () {
 $routes->get('payout/kay2pay/test', function () {
     return view('kay2pay_payout_test');
 });
+
+// Vendor Dashboard & Settings Routes (Protected by Auth)
+$routes->group('vendor', ['filter' => 'auth'], function ($routes) {
+    $routes->get('dashboard', 'VendorDashboard::index');
+    $routes->get('api-settings', 'VendorDashboard::apiSettings');
+    $routes->post('api-settings/update', 'VendorDashboard::updateApiSettings');
+    $routes->get('api-docs', 'VendorDashboard::apiDocs');
+});
 $routes->post('api/payment/test/create', 'PaymentTest::createTestPayment');
 
 
