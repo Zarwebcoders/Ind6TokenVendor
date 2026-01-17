@@ -38,8 +38,16 @@ class VendorApiController extends Controller
 
             // Here we would normally choose a gateway. 
             // For now, let's use Kay2Pay as the default engine.
+            if (!$this->vendor) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Unauthorized vendor context'
+                ])->setStatusCode(401);
+            }
 
             $kay2pay = new Kay2PayGatewayApi();
+            // Important: Controllers need to be initialized if called manually
+            $kay2pay->initController($this->request, $this->response, $this->logger);
 
             // Mock the request data that Kay2PayGatewayApi expects
             $internalRequest = [
@@ -54,10 +62,11 @@ class VendorApiController extends Controller
             $this->request->setBody(json_encode($internalRequest));
 
             // Call the initiation logic
-            // Note: We might need to refactor Kay2PayGatewayApi to be more "service-like" 
-            // but calling it as a controller method works for now.
             $gatewayResponse = $kay2pay->initiatePayment();
-            $result = json_decode($gatewayResponse->getBody(), true);
+
+            // Get the JSON result from the response object
+            $responseBody = $gatewayResponse->getBody();
+            $result = json_decode($responseBody, true);
 
             if ($result['success']) {
                 // Update the payment record with the vendor who initiated it
@@ -113,6 +122,8 @@ class VendorApiController extends Controller
 
             // Use the gateway check mechanism
             $kay2pay = new Kay2PayGatewayApi();
+            $kay2pay->initController($this->request, $this->response, $this->logger);
+
             $this->request->setBody(json_encode(['order_id' => $orderId]));
             $statusResponse = $kay2pay->checkStatus();
 
