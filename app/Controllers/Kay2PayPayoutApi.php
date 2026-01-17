@@ -34,7 +34,7 @@ class Kay2PayPayoutApi extends Controller
             log_message('info', 'Kay2Pay Payout Request Received: ' . json_encode($json));
 
             // Validate mandatory input according to docs
-            $requiredFields = ['name', 'account_number', 'ifsc_code', 'bank_name', 'amount', 'email'];
+            $requiredFields = ['name', 'account_number', 'ifsc_code', 'bank_name', 'amount', 'email', 'mobile'];
             foreach ($requiredFields as $field) {
                 if (empty($json[$field])) {
                     return $this->response->setJSON([
@@ -54,6 +54,7 @@ class Kay2PayPayoutApi extends Controller
             $requestData = [
                 'name' => $json['name'],
                 'email' => $json['email'],
+                'mobile' => $json['mobile'],
                 'account_number' => $json['account_number'],
                 'ifsc_code' => $json['ifsc_code'],
                 'bank_name' => $json['bank_name'],

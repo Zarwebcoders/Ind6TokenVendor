@@ -217,6 +217,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="mobile">Beneficiary Mobile</label>
+                    <input type="tel" id="mobile" name="mobile" placeholder="9999999999" required>
+                </div>
+
+                <div class="form-group">
                     <label for="account_number">Account Number</label>
                     <input type="text" id="account_number" name="account_number" placeholder="Enter bank account no"
                         required>
@@ -269,6 +274,7 @@
             const formData = {
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
+                mobile: document.getElementById('mobile').value,
                 account_number: document.getElementById('account_number').value,
                 ifsc_code: document.getElementById('ifsc_code').value,
                 bank_name: document.getElementById('bank_name').value,
