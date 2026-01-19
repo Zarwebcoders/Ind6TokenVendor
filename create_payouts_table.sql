@@ -1,0 +1,22 @@
+CREATE TABLE `payouts` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `vendor_id` int(11) unsigned NOT NULL,
+  `amount` decimal(20,8) NOT NULL,
+  `txn_id` varchar(100) NOT NULL,
+  `gateway_order_id` varchar(100) DEFAULT NULL,
+  `gateway_name` varchar(50) NOT NULL DEFAULT 'kay2pay',
+  `gateway_response` text DEFAULT NULL,
+  `beneficiary_name` varchar(255) NOT NULL,
+  `account_number` varchar(50) NOT NULL,
+  `ifsc_code` varchar(20) NOT NULL,
+  `bank_name` varchar(100) DEFAULT NULL,
+  `utr` varchar(100) DEFAULT NULL,
+  `status` enum('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
+  `method` varchar(50) NOT NULL DEFAULT 'bank_transfer',
+  `failure_reason` text DEFAULT NULL,
+  `verify_source` varchar(50) DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
