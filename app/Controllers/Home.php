@@ -182,9 +182,9 @@ class Home extends BaseController
     {
         $paymentModel = new \App\Models\PaymentModel();
 
-        $payments = $paymentModel->select('payments.*, vendors.name as vendor_name, vendors.email as vendor_email')
-            ->join('vendors', 'vendors.id = payments.vendor_id', 'left')
-            ->orderBy('payments.created_at', 'DESC')
+        $payments = $paymentModel->select('payment.*, vendors.name as vendor_name, vendors.email as vendor_email')
+            ->join('vendors', 'vendors.id = payment.vendor_id', 'left')
+            ->orderBy('payment.created_at', 'DESC')
             ->findAll();
 
         return view('utilities/transactions', ['payments' => $payments]);
