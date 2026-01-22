@@ -120,6 +120,8 @@ $routes->group('vendor', ['filter' => 'auth'], function ($routes) {
     $routes->get('dashboard', 'VendorDashboard::index');
     $routes->get('api-settings', 'VendorDashboard::apiSettings');
     $routes->post('api-settings/update', 'VendorDashboard::updateApiSettings');
+    $routes->get('kyc', 'VendorDashboard::kyc');
+    $routes->post('kyc/update', 'VendorDashboard::updateKyc');
     $routes->get('api-docs', 'VendorDashboard::apiDocs');
 });
 $routes->post('api/payment/test/create', 'PaymentTest::createTestPayment');

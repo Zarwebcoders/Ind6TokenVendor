@@ -152,24 +152,33 @@ class Kay2PayPayoutApi extends Controller
     /**
      * Check Kay2Pay Payout Status
      */
+    /**
+     * Check Kay2Pay Payout Status
+     */
     public function checkStatus()
     {
         try {
             $json = $this->request->getJSON(true);
-            $txnId = $json['txn_id'] ?? null;
 
-            if (!$txnId) {
+            // Allow flexible input based on API docs: check_by can be txnid/udf1/udf2/udf3
+            // Default to 'udf1' (our internal txn_id) if only 'txn_id' is passed in request for backward compatibility
+            $checkBy = $json['check_by'] ?? 'udf1';
+            $checkValue = $json['check_value'] ?? ($json['txn_id'] ?? null);
+
+            if (!$checkValue) {
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => 'Transaction ID is required'
+                    'message' => 'Check value is required (provide check_value and check_by, or txn_id)'
                 ]);
             }
 
             // Prepare API request data
             $requestData = [
-                'check_by' => 'udf1', // We use udf1 for our merchant ID
-                'check_value' => $txnId
+                'check_by' => $checkBy,
+                'check_value' => $checkValue
             ];
+
+            log_message('info', 'Kay2Pay Payout Check Status Request: ' . json_encode($requestData));
 
             // Make API request
             $ch = curl_init($this->checkUrl);
@@ -186,44 +195,105 @@ class Kay2PayPayoutApi extends Controller
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
-            log_message('info', "Kay2Pay Payout Status Response for {$txnId}: " . $response);
+            log_message('info', "Kay2Pay Payout Status Response for {$checkValue}: " . $response);
+
+            if ($curlError) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Connection error: ' . $curlError
+                ]);
+            }
 
             $responseData = json_decode($response, true);
             $apiStatus = strtolower((string) ($responseData['status'] ?? ''));
 
-            if ($httpCode === 200 && $apiStatus === 'success' && isset($responseData['data'])) {
+            // API Level Success
+            if ($apiStatus === 'success' && isset($responseData['data'])) {
                 $data = $responseData['data'];
+
+                // Transaction Status from 'data.status' (success/failed/pending)
                 $txnStatus = strtolower((string) ($data['status'] ?? 'pending'));
 
-                // Update database
-                $payout = $this->payoutModel->where('txn_id', $txnId)->first();
+                // Map to our DB status
+                $dbStatus = 'processing';
+                if ($txnStatus === 'success') {
+                    $dbStatus = 'completed';
+                } elseif ($txnStatus === 'failed') {
+                    $dbStatus = 'failed';
+                }
+
+                // Find the payout record in DB
+                // If check_by was udf1, checkValue is our txn_id.
+                // If check_by was txnid, checkValue is gateway_order_id.
+                // RELIABLE METHOD: The response 'data' should contain udf1 (our txn_id). Use that if available.
+
+                $payout = null;
+                if (!empty($data['udf1'])) {
+                    $payout = $this->payoutModel->where('txn_id', $data['udf1'])->first();
+                }
+
+                // Fallback: search based on what we sent if response doesn't have udf1
+                if (!$payout) {
+                    if ($checkBy === 'udf1') {
+                        $payout = $this->payoutModel->where('txn_id', $checkValue)->first();
+                    } elseif ($checkBy === 'txnid' || $checkBy === 'txn_id') {
+                        $payout = $this->payoutModel->where('gateway_order_id', $checkValue)->first();
+                    }
+                }
+
                 if ($payout) {
                     $updateData = [
-                        'utr' => $data['utr_no'] ?? $payout['utr'],
-                        'status' => ($txnStatus === 'success') ? 'completed' : (($txnStatus === 'failed') ? 'failed' : 'processing'),
+                        'status' => $dbStatus,
+                        'gateway_response' => $response, // Store latest response logs
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
 
-                    if ($txnStatus === 'success' && empty($payout['completed_at'])) {
+                    // Update UTR if present
+                    if (!empty($data['utr_no'])) {
+                        $updateData['utr'] = $data['utr_no'];
+                    }
+
+                    // Update Gateway Transaction ID (from data.txn_id)
+                    if (!empty($data['txn_id'])) {
+                        $updateData['gateway_order_id'] = $data['txn_id'];
+                    }
+
+                    // Handle completion
+                    if ($dbStatus === 'completed' && empty($payout['completed_at'])) {
                         $updateData['completed_at'] = date('Y-m-d H:i:s');
                     }
 
-                    $this->payoutModel->update($payout['id'], $updateData);
-                }
+                    // Handle failure reason
+                    if ($dbStatus === 'failed') {
+                        $updateData['failure_reason'] = $responseData['message'] ?? 'Transaction failed at gateway';
+                    }
 
-                return $this->response->setJSON([
-                    'success' => true,
-                    'status' => $txnStatus,
-                    'utr' => $data['utr_no'] ?? null,
-                    'message' => $responseData['message'] ?? 'Status retrieved'
-                ]);
+                    $this->payoutModel->update($payout['id'], $updateData);
+
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'status' => $txnStatus,
+                        'db_status' => $dbStatus,
+                        'utr' => $updateData['utr'] ?? null,
+                        'message' => $responseData['message'] ?? 'Status updated successfully',
+                        'data' => $data
+                    ]);
+                } else {
+                    return $this->response->setJSON([
+                        'success' => false,
+                        'message' => 'Payout record not found in database.',
+                        'api_data' => $data
+                    ]);
+                }
             }
 
             return $this->response->setJSON([
                 'success' => false,
-                'message' => $responseData['message'] ?? 'Failed to retrieve payout status'
+                'message' => $responseData['message'] ?? 'Failed to retrieve payout status',
+                'raw' => $responseData
             ]);
 
         } catch (\Exception $e) {

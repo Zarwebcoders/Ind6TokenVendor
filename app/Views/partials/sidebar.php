@@ -52,6 +52,13 @@ $current_url = current_url();
                         <span>Developer Guide</span>
                     </a>
                 </li>
+                <li>
+                    <a href="<?= base_url('vendor/kyc') ?>"
+                        class="flex items-center px-4 py-2.5 rounded-md <?= base_url('vendor/kyc') == $current_url ? 'bg-lightprimary text-primary font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-lightprimary hover:text-primary transition-colors' ?>">
+                        <iconify-icon icon="solar:shield-check-bold-duotone" class="text-xl mr-3"></iconify-icon>
+                        <span>KYC Verification</span>
+                    </a>
+                </li>
             </ul>
         </div>
 

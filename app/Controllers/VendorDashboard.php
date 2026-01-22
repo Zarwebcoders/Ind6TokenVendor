@@ -106,4 +106,74 @@ class VendorDashboard extends BaseController
 
         return view('vendor/api_docs', $data);
     }
+
+    /**
+     * KYC Settings Page
+     */
+    public function kyc()
+    {
+        if (!session()->get('isLoggedIn')) {
+            return redirect()->to(base_url('login'));
+        }
+
+        $vendorId = session()->get('id');
+        $data['vendor'] = $this->vendorModel->find($vendorId);
+
+        return view('vendor/kyc', $data);
+    }
+
+    /**
+     * Handle KYC Update
+     */
+    public function updateKyc()
+    {
+        if (!session()->get('isLoggedIn')) {
+            return redirect()->to(base_url('login'));
+        }
+
+        $vendorId = session()->get('id');
+        $vendor = $this->vendorModel->find($vendorId);
+
+        $rules = [
+            'pan_number' => 'required',
+            'gst_number' => 'permit_empty',
+            'hsn_code' => 'permit_empty',
+            'address' => 'required',
+            'city' => 'required',
+            'pincode' => 'required|numeric|min_length[6]|max_length[6]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $updateData = [
+            'pan_number' => $this->request->getPost('pan_number'),
+            'gst_number' => $this->request->getPost('gst_number'),
+            'hsn_code' => $this->request->getPost('hsn_code'),
+            'address' => $this->request->getPost('address'),
+            'city' => $this->request->getPost('city'),
+            'pincode' => $this->request->getPost('pincode'),
+            'kyc_status' => 'pending' // Reset to pending when updated
+        ];
+
+        // Handle File Uploads
+        $panDoc = $this->request->getFile('pan_document');
+        if ($panDoc && $panDoc->isValid() && !$panDoc->hasMoved()) {
+            $newName = $panDoc->getRandomName();
+            $panDoc->move(FCPATH . 'uploads/kyc/' . $vendorId, $newName);
+            $updateData['pan_document'] = 'uploads/kyc/' . $vendorId . '/' . $newName;
+        }
+
+        $gstDoc = $this->request->getFile('gst_document');
+        if ($gstDoc && $gstDoc->isValid() && !$gstDoc->hasMoved()) {
+            $newName = $gstDoc->getRandomName();
+            $gstDoc->move(FCPATH . 'uploads/kyc/' . $vendorId, $newName);
+            $updateData['gst_document'] = 'uploads/kyc/' . $vendorId . '/' . $newName;
+        }
+
+        $this->vendorModel->update($vendorId, $updateData);
+
+        return redirect()->back()->with('success', 'KYC details submitted successfully! Our team will review it soon.');
+    }
 }

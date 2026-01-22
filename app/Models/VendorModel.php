@@ -26,7 +26,15 @@ class VendorModel extends Model
         'api_token',
         'api_secret',
         'whitelisted_ips',
-        'webhook_url'
+        'webhook_url',
+        'pan_number',
+        'gst_number',
+        'hsn_code',
+        'address',
+        'city',
+        'pincode',
+        'pan_document',
+        'gst_document'
     ];
 
     // Dates

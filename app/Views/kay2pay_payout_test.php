@@ -253,6 +253,35 @@
         </div>
 
         <div id="result"></div>
+
+        <div style="margin-top: 40px; border-top: 1px solid #edf2f7; padding-top: 30px;">
+            <div class="header" style="margin-bottom: 20px;">
+                <h2 style="font-size: 20px; color: #2d3436;">🔍 Check Transaction Status</h2>
+                <p style="font-size: 14px;">Manually check status of any transaction</p>
+            </div>
+
+            <form id="checkStatusForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="check_by">Check By</label>
+                        <select id="check_by" class="form-control"
+                            style="width: 100%; padding: 12px 15px; border: 2px solid #edf2f7; border-radius: 10px; background: #f8fafc;">
+                            <option value="udf1">Internal Txn ID (check_by=udf1)</option>
+                            <option value="txn_id">Gateway Txn ID (check_by=txn_id)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="check_value">Transaction ID / Value</label>
+                        <input type="text" id="check_value" placeholder="Enter ID to check" required>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn" style="background: #2d3436; margin-top: 10px;">Check
+                    Status</button>
+            </form>
+            <div id="checkResult"
+                style="margin-top: 20px; display: none; padding: 15px; border-radius: 10px; white-space: pre-wrap; font-family: monospace; font-size: 13px;">
+            </div>
+        </div>
     </div>
 
     <script>
@@ -320,37 +349,64 @@
             }
         });
 
-        async function checkPayoutStatus(txnId) {
-            const btn = event.target;
+
+        const checkStatusForm = document.getElementById('checkStatusForm');
+        const checkResultDiv = document.getElementById('checkResult');
+
+        checkStatusForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = checkStatusForm.querySelector('button');
             const originalText = btn.textContent;
+            
             btn.textContent = 'Checking...';
             btn.disabled = true;
+            checkResultDiv.style.display = 'none';
+            checkResultDiv.className = '';
+
+            const payload = {
+                check_by: document.getElementById('check_by').value,
+                check_value: document.getElementById('check_value').value
+            };
 
             try {
                 const response = await fetch(`${BASE_URL}api/kay2pay/payout/check-status`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ txn_id: txnId })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-
+                
                 const data = await response.json();
                 
+                checkResultDiv.style.display = 'block';
                 if (data.success) {
-                    alert(`Status: ${data.status.toUpperCase()}\nUTR: ${data.utr || 'N/A'}\nMessage: ${data.message}`);
-                    if (document.getElementById('lastStatus')) {
-                        document.getElementById('lastStatus').textContent = data.status;
-                    }
+                    checkResultDiv.style.background = '#d4edda';
+                    checkResultDiv.style.color = '#155724';
+                    checkResultDiv.style.border = '1px solid #c3e6cb';
+                    checkResultDiv.textContent = JSON.stringify(data, null, 2);
                 } else {
-                    alert('Error: ' + data.message);
+                    checkResultDiv.style.background = '#f8d7da';
+                    checkResultDiv.style.color = '#721c24';
+                    checkResultDiv.style.border = '1px solid #f5c6cb';
+                    checkResultDiv.textContent = JSON.stringify(data, null, 2);
                 }
+
             } catch (error) {
-                alert('Status Check Failed: ' + error.message);
+                checkResultDiv.style.display = 'block';
+                checkResultDiv.style.background = '#f8d7da';
+                checkResultDiv.textContent = 'Error: ' + error.message;
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
+        });
+
+        // Helper function for the button in the main result (keeps compatibility)
+        async function checkPayoutStatus(txnId) {
+            // Pre-fill the independent form
+            document.getElementById('check_by').value = 'udf1';
+            document.getElementById('check_value').value = txnId;
+            // Trigger the check
+            checkStatusForm.querySelector('button').click();
         }
     </script>
 </body>
