@@ -14,13 +14,13 @@ class Home extends BaseController
 
         // 1. Total tokens sold (Count of successful payments for this vendor)
         $tokensSold = $paymentModel->where('status', 'success')
-                                   ->where('vendor_id', $vendorId)
-                                   ->countAllResults();
+            ->where('vendor_id', $vendorId)
+            ->countAllResults();
 
         // 2. Total Transaction (Sum of success payments for this vendor)
         $totalTransaction = $paymentModel->where('status', 'success')
-                                         ->where('vendor_id', $vendorId)
-                                         ->selectSum('amount')->get()->getRow()->amount ?? 0;
+            ->where('vendor_id', $vendorId)
+            ->selectSum('amount')->get()->getRow()->amount ?? 0;
 
         // 3. Monthly Transaction (Sum of success payments in current month for this vendor)
         $monthlyTransaction = $paymentModel->where('status', 'success')
@@ -43,19 +43,19 @@ class Home extends BaseController
         for ($m = 1; $m <= 12; $m++) {
             $monthStart = date("$currentYear-$m-01 00:00:00");
             $monthEnd = date("$currentYear-$m-t 23:59:59");
-            
+
             $earning = $paymentModel->where('status', 'success')
                 ->where('vendor_id', $vendorId)
                 ->where('created_at >=', $monthStart)
                 ->where('created_at <=', $monthEnd)
                 ->selectSum('amount')->get()->getRow()->amount ?? 0;
-            
-            $monthlyEarnings[] = (float)$earning;
+
+            $monthlyEarnings[] = (float) $earning;
         }
 
         // 7. Yearly Breakup Data (Sales for Current Year vs Previous Year)
         $previousYear = $currentYear - 1;
-        
+
         $currentYearSales = $paymentModel->where('status', 'success')
             ->where('vendor_id', $vendorId)
             ->where('created_at >=', date("$currentYear-01-01 00:00:00"))
@@ -67,7 +67,7 @@ class Home extends BaseController
             ->where('created_at >=', date("$previousYear-01-01 00:00:00"))
             ->where('created_at <=', date("$previousYear-12-31 23:59:59"))
             ->selectSum('amount')->get()->getRow()->amount ?? 0;
-            
+
         // Calculate Yearly Growth
         $yearlyGrowth = 0;
         if ($previousYearSales > 0) {
@@ -80,13 +80,13 @@ class Home extends BaseController
         $currentMonth = date('m');
         $lastYearSameMonthStart = date("$previousYear-$currentMonth-01 00:00:00");
         $lastYearSameMonthEnd = date("$previousYear-$currentMonth-t 23:59:59");
-        
+
         $monthlyTransactionLastYear = $paymentModel->where('status', 'success')
             ->where('vendor_id', $vendorId)
             ->where('created_at >=', $lastYearSameMonthStart)
             ->where('created_at <=', $lastYearSameMonthEnd)
             ->selectSum('amount')->get()->getRow()->amount ?? 0;
-            
+
         $monthlyGrowth = 0;
         if ($monthlyTransactionLastYear > 0) {
             $monthlyGrowth = (($monthlyTransaction - $monthlyTransactionLastYear) / $monthlyTransactionLastYear) * 100;
@@ -94,18 +94,49 @@ class Home extends BaseController
             $monthlyGrowth = 100;
         }
 
+        // 9. Payins statistics
+        $payinStats = [
+            'total_amount' => $paymentModel->where('vendor_id', $vendorId)->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'total_count' => $paymentModel->where('vendor_id', $vendorId)->countAllResults(),
+            'process_amount' => $paymentModel->where('vendor_id', $vendorId)->whereIn('status', ['pending', 'processing'])->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'process_count' => $paymentModel->where('vendor_id', $vendorId)->whereIn('status', ['pending', 'processing'])->countAllResults(),
+            'success_amount' => $paymentModel->where('vendor_id', $vendorId)->where('status', 'success')->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'success_count' => $paymentModel->where('vendor_id', $vendorId)->where('status', 'success')->countAllResults(),
+            'failed_amount' => $paymentModel->where('vendor_id', $vendorId)->where('status', 'failed')->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'failed_count' => $paymentModel->where('vendor_id', $vendorId)->where('status', 'failed')->countAllResults(),
+        ];
+
+        // 10. Payouts statistics
+        $payoutModel = new \App\Models\PayoutModel();
+        $payoutStats = [
+            'total_amount' => $payoutModel->where('vendor_id', $vendorId)->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'total_count' => $payoutModel->where('vendor_id', $vendorId)->countAllResults(),
+            'process_amount' => $payoutModel->where('vendor_id', $vendorId)->whereIn('status', ['pending', 'processing'])->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'process_count' => $payoutModel->where('vendor_id', $vendorId)->whereIn('status', ['pending', 'processing'])->countAllResults(),
+            'success_amount' => $payoutModel->where('vendor_id', $vendorId)->where('status', 'completed')->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'success_count' => $payoutModel->where('vendor_id', $vendorId)->where('status', 'completed')->countAllResults(),
+            'failed_amount' => $payoutModel->where('vendor_id', $vendorId)->where('status', 'failed')->selectSum('amount')->get()->getRow()->amount ?? 0,
+            'failed_count' => $payoutModel->where('vendor_id', $vendorId)->where('status', 'failed')->countAllResults(),
+        ];
+
+        // 11. Wallet Balance (Calculated: Total Success Payins - Total Success Payouts)
+        $walletBalance = $payinStats['success_amount'] - $payoutStats['success_amount'];
+
         $data = [
-            'tokensSold'         => $tokensSold,
-            'totalTransaction'   => $totalTransaction,
+            'tokensSold' => $tokensSold,
+            'totalTransaction' => $totalTransaction,
             'monthlyTransaction' => $monthlyTransaction,
-            'totalPayments'      => $totalPayments, // Changed key
-            'recentPayments'     => $recentPayments, // Changed key
-            'monthlyEarnings'    => $monthlyEarnings,
-            'currentYear'        => $currentYear,
-            'previousYear'       => $previousYear,
-            'yearlySales'        => [(float)$currentYearSales, (float)$previousYearSales],
-            'yearlyGrowth'       => $yearlyGrowth,
-            'monthlyGrowth'      => $monthlyGrowth,
+            'totalPayments' => $totalPayments,
+            'recentPayments' => $recentPayments,
+            'monthlyEarnings' => $monthlyEarnings,
+            'currentYear' => $currentYear,
+            'previousYear' => $previousYear,
+            'yearlySales' => [(float) $currentYearSales, (float) $previousYearSales],
+            'yearlyGrowth' => $yearlyGrowth,
+            'monthlyGrowth' => $monthlyGrowth,
+            'payinStats' => $payinStats,
+            'payoutStats' => $payoutStats,
+            'walletBalance' => $walletBalance,
         ];
 
         return view('dashboard', $data);
@@ -147,10 +178,10 @@ class Home extends BaseController
         return view('utilities/vendors', ['vendors' => $vendors]);
     }
 
-     public function utilitiesTransactions(): string
+    public function utilitiesTransactions(): string
     {
         $paymentModel = new \App\Models\PaymentModel();
-        
+
         $payments = $paymentModel->select('payments.*, vendors.name as vendor_name, vendors.email as vendor_email')
             ->join('vendors', 'vendors.id = payments.vendor_id', 'left')
             ->orderBy('payments.created_at', 'DESC')

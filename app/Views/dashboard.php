@@ -28,7 +28,8 @@
                                 </span>
                             </div>
                             <h5 class="text-2xl font-semibold text-dark dark:text-white" id="token-balance-display">
-                                <?= number_format($tokensSold) ?></h5>
+                                <?= number_format($tokensSold) ?>
+                            </h5>
                         </div>
                     </div>
                     <!-- Total Sales -->
@@ -47,7 +48,8 @@
                                 </span>
                             </div>
                             <h5 class="text-2xl font-semibold text-dark dark:text-white">₹
-                                <?= number_format($totalTransaction, 2) ?></h5>
+                                <?= number_format($totalTransaction, 2) ?>
+                            </h5>
                         </div>
                     </div>
                     <!-- Monthly Sales -->
@@ -66,7 +68,8 @@
                                 </span>
                             </div>
                             <h5 class="text-2xl font-semibold text-dark dark:text-white">₹
-                                <?= number_format($monthlyTransaction, 2) ?></h5>
+                                <?= number_format($monthlyTransaction, 2) ?>
+                            </h5>
                         </div>
                     </div>
                     <!-- Total Customers -->
@@ -84,7 +87,141 @@
                                 </span>
                             </div>
                             <h5 class="text-2xl font-semibold text-dark dark:text-white">
-                                <?= number_format($totalPayments) ?></h5>
+                                <?= number_format($totalPayments) ?>
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Statistics Sections -->
+                <div class="grid grid-cols-12 gap-6 mb-8">
+                    <!-- Payins Card -->
+                    <div class="col-span-12 lg:col-span-5">
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-border h-full">
+                            <div class="flex items-center gap-3 mb-6">
+                                <span
+                                    class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                    <iconify-icon icon="solar:round-transfer-horizontal-bold-duotone"
+                                        width="24"></iconify-icon>
+                                </span>
+                                <h5 class="text-lg font-bold text-dark dark:text-white">Payins</h5>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Total</p>
+                                    <h6 class="text-sm font-bold text-dark dark:text-white">₹
+                                        <?= number_format($payinStats['total_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payinStats['total_count'] ?>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">In-Process</p>
+                                    <h6 class="text-sm font-bold text-warning">₹
+                                        <?= number_format($payinStats['process_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payinStats['process_count'] ?>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Success</p>
+                                    <h6 class="text-sm font-bold text-success">₹
+                                        <?= number_format($payinStats['success_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payinStats['success_count'] ?>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Failed</p>
+                                    <h6 class="text-sm font-bold text-error">₹
+                                        <?= number_format($payinStats['failed_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payinStats['failed_count'] ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payouts Card -->
+                    <div class="col-span-12 lg:col-span-5">
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-border h-full">
+                            <div class="flex items-center gap-3 mb-6">
+                                <span
+                                    class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center text-error">
+                                    <iconify-icon icon="solar:hand-money-bold-duotone" width="24"></iconify-icon>
+                                </span>
+                                <h5 class="text-lg font-bold text-dark dark:text-white">Payouts</h5>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Total</p>
+                                    <h6 class="text-sm font-bold text-dark dark:text-white">₹
+                                        <?= number_format($payoutStats['total_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payoutStats['total_count'] ?>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">In-Process</p>
+                                    <h6 class="text-sm font-bold text-warning">₹
+                                        <?= number_format($payoutStats['process_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payoutStats['process_count'] ?>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Success</p>
+                                    <h6 class="text-sm font-bold text-success">₹
+                                        <?= number_format($payoutStats['success_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payoutStats['success_count'] ?>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-border/50">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Failed</p>
+                                    <h6 class="text-sm font-bold text-error">₹
+                                        <?= number_format($payoutStats['failed_amount'], 0) ?>
+                                    </h6>
+                                    <p class="text-[10px] text-gray-400">
+                                        <?= $payoutStats['failed_count'] ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wallet Card -->
+                    <div class="col-span-12 lg:col-span-2">
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-border h-full">
+                            <div class="flex flex-col h-full">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <span
+                                        class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success">
+                                        <iconify-icon icon="solar:wallet-2-bold-duotone" width="24"></iconify-icon>
+                                    </span>
+                                    <h5 class="text-lg font-bold text-dark dark:text-white">Wallet</h5>
+                                </div>
+                                <div class="mt-auto">
+                                    <p class="text-[11px] text-gray-500 uppercase font-bold mb-1">Balance</p>
+                                    <h4 class="text-2xl font-bold text-dark dark:text-white">₹
+                                        <?= number_format($walletBalance, 2) ?>
+                                    </h4>
+                                    <div class="mt-4 flex gap-2">
+                                        <div
+                                            class="w-full h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                            <div class="h-full bg-success" style="width: 70%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -99,7 +236,8 @@
                             <div class="flex items-center gap-4">
                                 <div class="flex-1">
                                     <h4 class="text-2xl font-bold text-dark dark:text-white mb-2">₹
-                                        <?= number_format($totalTransaction, 0) ?></h4>
+                                        <?= number_format($totalTransaction, 0) ?>
+                                    </h4>
                                     <div class="flex items-center gap-2 mb-2">
                                         <?php if ($yearlyGrowth >= 0): ?>
                                             <span
@@ -114,7 +252,8 @@
                                         <?php endif; ?>
                                         <p class="text-dark dark:text-white text-sm font-semibold">
                                             <?= ($yearlyGrowth >= 0 ? '+' : '') . number_format($yearlyGrowth, 1) ?>%
-                                            <span class="text-gray-400 font-normal">last year</span></p>
+                                            <span class="text-gray-400 font-normal">last year</span>
+                                        </p>
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <div class="flex items-center gap-1">
@@ -137,7 +276,8 @@
                             <div class="flex items-end justify-between">
                                 <div>
                                     <h4 class="text-2xl font-bold text-dark dark:text-white mb-2">₹
-                                        <?= number_format($monthlyTransaction, 0) ?></h4>
+                                        <?= number_format($monthlyTransaction, 0) ?>
+                                    </h4>
                                     <div class="flex items-center gap-2 mb-2">
                                         <?php if ($monthlyGrowth >= 0): ?>
                                             <span
@@ -152,7 +292,8 @@
                                         <?php endif; ?>
                                         <p class="text-dark dark:text-white text-sm font-semibold">
                                             <?= ($monthlyGrowth >= 0 ? '+' : '') . number_format($monthlyGrowth, 1) ?>%
-                                            <span class="text-gray-400 font-normal">last year</span></p>
+                                            <span class="text-gray-400 font-normal">last year</span>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -201,9 +342,11 @@
                                     <?php foreach ($recentPayments as $payment): ?>
                                         <tr class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td class="py-4 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                                <?= $payment['id'] ?></td>
+                                                <?= $payment['id'] ?>
+                                            </td>
                                             <td class="py-4 px-6 font-semibold text-dark dark:text-white">₹
-                                                <?= number_format($payment['amount'], 2) ?></td>
+                                                <?= number_format($payment['amount'], 2) ?>
+                                            </td>
                                             <td class="py-4 px-6 text-gray-500 uppercase text-xs"><?= $payment['method'] ?></td>
                                             <td class="py-4 px-6">
                                                 <?php
@@ -218,7 +361,8 @@
                                                     class="<?= $statusClass ?> text-[10px] font-bold px-2 py-1 rounded uppercase"><?= ucfirst($payment['status']) ?></span>
                                             </td>
                                             <td class="py-4 px-6 text-gray-400 text-xs">
-                                                <?= date('M d, Y H:i', strtotime($payment['created_at'])) ?></td>
+                                                <?= date('M d, Y H:i', strtotime($payment['created_at'])) ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
